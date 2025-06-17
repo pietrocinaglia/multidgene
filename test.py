@@ -2,13 +2,18 @@
 
 import os
 
-from muxgene import MUXGENE
+from multidgene import MultiDGene
 
 ###
+#
+# [ This code is made available for testing purposes only ]
+#
+# @project: multi-DGeNe
 # @author: Pietro Cinaglia
 # @mail: cinaglia@unicz.it
-# @description: Multiplex Gene Network (muxGeNe) inference from gene expression across human tissues.
-# @url: https://github.com/pietrocinaglia/muxgene
+# @mail: cinaglia@unicz.it
+# @description: Multi-Dimensional Gene Network (multi-DGeNe) inference based on Weighted Gene Co-expression Network Analysis (WGCNA) across human tissues.
+# @url: https://github.com/pietrocinaglia/multidgene
 ###
 
 WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
@@ -23,15 +28,15 @@ print("- Tissues: " + str(tissues_of_interest))
 print("################################################")
 print()
 
-muxgene = MUXGENE(genes_of_interest, tissues_of_interest, verbose=True)
+multidgene = MultiDGene(genes_of_interest, tissues_of_interest, verbose=True)
 
 # Data processing
-multiplex_network = muxgene.construct_multiplex_network()
+multidimensional_network = multidgene.construct_multidimensional_network()
 
-# Plotting multiplex_network, if output_path None the figure will not be saved as file.
-muxgene.plot(multiplex_network)
+# Plotting multidimensional_network, if output_path None the figure will not be saved as file.
+multidgene.plot(multidimensional_network)
 
-# Storing multiplex_network as set of edgelist, one per layer
-#muxgene.save_as_files(multiplex_network,output_path=WORKSPACE)
+# Storing multidimensional_network as set of edgelist, one per layer
+#multidgene.save_as_files(multidimensional_network,output_path=WORKSPACE)
 
 print(">>> DONE <<<")

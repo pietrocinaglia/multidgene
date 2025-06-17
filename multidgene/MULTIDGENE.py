@@ -8,17 +8,18 @@ import scipy
 import statistics
 from itertools import combinations
 import matplotlib.pyplot as plt
-
 import csv
 
 ###
+# @project: multi-DGeNe
 # @author: Pietro Cinaglia
 # @mail: cinaglia@unicz.it
-# @description: Multiplex Gene Network (muxGeNe) inference from gene expression across human tissues.
-# @url: https://github.com/pietrocinaglia/muxGeNe
+# @mail: cinaglia@unicz.it
+# @description: Multi-Dimensional Gene Network (multi-DGeNe) inference based on Weighted Gene Co-expression Network Analysis (WGCNA) across human tissues.
+# @url: https://github.com/pietrocinaglia/multidgene
 ###
 
-class MUXGENE:
+class MultiDGene:
     WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
     #
     UNIT = 'TPM'
@@ -38,14 +39,19 @@ class MUXGENE:
             raise Exception("Genes of interest ('genes_of_interest:list') are mandatory; this list cannot be empty or none.")
 
         if self.verbose == True:
-            print( "***********************************************************" )
-            print( " ------------------------------------" )
-            print( " > Multiplex Gene Network (muxGeNe) < " )
-            print( " ------------------------------------" )
-            print( "  Version:\t0.1" )
-            print( "  GitHub:\t" + "https://github.com/pietrocinaglia/muxgene" )
-            print( "  Contact:\tPietro Cinaglia (cinaglia@unicz.it)" )
-            print( "***********************************************************" )
+            print( "***************************************************************" )
+            print( " --------------------------------------------------------------" )
+            print( " >        multi-Dimensional Gene Network (multi-DGeNe)        <" )
+            print( " --------------------------------------------------------------" )
+            print( "  Description:\tMulti-Dimensional Gene Network (multi-DGeNe)   " )
+            print( "              \tinference based on Weighted Gene Co-expression " )
+            print( "              \t Network Analysis (WGCNA) across human tissues." )
+            print( " --------------------------------------------------------------" )
+            print( "  Version:\t0.1                                                " )
+            print( "  GitHub:\t" + "https://github.com/pietrocinaglia/multidgene   " )
+            print( "  Contact:\tPietro Cinaglia (cinaglia@unicz.it)                " )
+            print( " --------------------------------------------------------------" )
+            print( "***************************************************************" )
             print()
         
         print("[INFO] Loading metadata...")
@@ -90,7 +96,7 @@ class MUXGENE:
 
         return data
     
-    def construct_multiplex_network(self) -> list:
+    def construct_multidimensional_network(self) -> pymnet.MultilayerNetwork:
         if self.verbose == True:
             print("[INFO] Data Retrieving...")       
 
@@ -103,7 +109,7 @@ class MUXGENE:
         if self.verbose == True:
             print("- Data concerning gene expression across human tissues [OK] ")
             print()
-            print("[INFO] Multiplex Network Construction...")
+            print("[INFO] Multi-Dimensional Network Construction...")
         
         # Only for testing (1/2)
         with open(self.WORKSPACE+'statistics_result.csv', 'w', newline='') as file:
@@ -111,13 +117,13 @@ class MUXGENE:
             field = ['gene1', 'gene2', 'tissue', 's', 'p', 'is_significative']
             writer.writerow(field)
 
-        multiplex_network = pymnet.MultiplexNetwork()
+        multilayer_network = pymnet.MultilayerNetwork()
 
         for i in range(len(self.tissues_of_interest)):
 
             current_tissue = self.tissues_of_interest[i]
 
-            multiplex_network.add_layer(current_tissue)
+            multilayer_network.add_layer(current_tissue)
 
             if self.verbose == True:
                 print("- Layer " + str(i+1) + " (" + str(current_tissue) + ") ...")
@@ -144,7 +150,7 @@ class MUXGENE:
                 p = round(p, 8)
                 if p < self.p_threshold and (s > self.s_threshold[0] and s < self.s_threshold[1]):
                     #current_layer.add_edge(u,v, pvalue=p)
-                    multiplex_network[u,v,current_tissue,current_tissue] = self.p_threshold
+                    multilayer_network[u,v,current_tissue,current_tissue] = self.p_threshold
                 
                 # Only for testing (2/2)
                 with open(self.WORKSPACE+'statistics_result.csv', 'a', newline='') as file:
@@ -156,14 +162,14 @@ class MUXGENE:
                 print("-- [OK]")
         
         if self.verbose == True:
-            print("- Multiplex Network built.")
+            print("- Multilayer Network built.")
 
-        return multiplex_network
+        return multilayer_network
 
-    def plot(self, multiplex_network:pymnet.MultiplexNetwork, output_path:str=None):
+    def plot(self, multilayer_network:pymnet.MultilayerNetwork, output_path:str=None):
         
         fig = pymnet.draw(
-            multiplex_network,
+            multilayer_network,
             autoscale = True,
             layershape='rectangle',
             layerPadding=0.2,
@@ -180,19 +186,19 @@ class MUXGENE:
             )
         
         if output_path is not None:
-            filepath = output_path + "multiplex_network"
+            filepath = output_path + "multilayer_network"
             fig.savefig(filepath + ".pdf")
-            #pymnet.webplot(multiplex_network, outputfile=filepath + ".html")
+            #pymnet.webplot(multilayer_network, outputfile=filepath + ".html")
             print("- Plot saved as file [OK]")
 
         plt.show()
 
-    def save_as_files(self, multiplex_network:pymnet.MultiplexNetwork, output_path:str):
+    def save_as_files(self, multilayer_network:pymnet.MultilayerNetwork, output_path:str):
         
         if output_path is None:
             raise Exception("You must provide an output path for storing data.")
         
-        filepath = output_path + "multiplex_network.txt"
+        filepath = output_path + "multilayer_network.txt"
 
-        pymnet.write_edge_file(multiplex_network, filepath, sep='\t', weights=True, numericNodes=False)
-        print("- Multiplex Network saved as file [OK]")
+        pymnet.write_edge_file(multilayer_network, filepath, sep='\t', weights=True, numericNodes=False)
+        print("- multilayer Network saved as file [OK]")

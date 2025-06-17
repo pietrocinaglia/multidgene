@@ -1,6 +1,6 @@
-# Multiplex Gene Network (muxGeNe) inference from gene expression across human tissues.
+# Multi-Dimensional Gene Network (multi-DGeNe)
 
-**muxGeNe** is a tool for inferring Multiplex Gene Networks from data concerning gene expression across human tissues of interest.
+**multi-DGeNe** is a tool for inferring Multi-Dimensional Gene Network (multi-DGeNe) inference based on Weighted Gene Co-expression Network Analysis (WGCNA) across human tissues.
 
 
 ## Additional Information
@@ -17,7 +17,7 @@ The human tissues are registered by GTEx Portal and must be recalled using the l
 
 ## Getting Started <a name="getting-started"></a>
 
-To begin using **muxGeNe** you have to follow these steps:
+To begin using **multi-DGeNe** you have to follow these steps:
 
 1. Install dependecies
 
@@ -25,30 +25,28 @@ To begin using **muxGeNe** you have to follow these steps:
 pip install -r requirements.txt
 ```
 
-2. Copy **muxGeNe** class and import it into your code:
+2. Copy **multidgene** and import it into your code:
 
-- 2.1. Copy "muxgene" folder into your workspace.
+- 2.1. Copy "multidgene" folder into your workspace.
 
-- 2.2. Import MUXGENE in your code:
-
-```
-from muxgene import MUXGENE
-```
-
-3. Create an instance of **MUXGENE**:
+- 2.2. Import multi-DGeNe in your code:
 
 ```
-muxgene = MUXGENE(genes_of_interest:list, tissues_of_interest:list, threshold:float=0.05, verbose:bool=False):
+from multidgene import MultiDGene
+```
+
+3. Create an instance of **multi-DGeNe**:
+
+```
+multidgene = MultiDGene(genes_of_interest:list, tissues_of_interest:list=[], threshold:float=0.05, verbose:bool=False):
 ```
 
 4. Use the following methods:
 
-- construct_multiplex_network() -> list
-- plot(with_labels:bool=True, savefig:str=None)
+- construct_multidimensional_network() -> pymnet.MultilayerNetwork
+- plot(multilayer_network:pymnet.MultilayerNetwork, output_path:str=None)
+- save_as_files(multilayer_network:pymnet.MultilayerNetwork, output_path:str):
 
-Additionally, the following method for testing was implemented:
-
-- test(plot:bool=True, savefig:str=None)
 
 ## Usage <a name="usage"></a>
 
