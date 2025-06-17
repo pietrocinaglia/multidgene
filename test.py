@@ -19,7 +19,7 @@ from multidgene import MultiDGene
 WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 genes_of_interest = ['BRCA1','MZT2B','TP53','DDB2','USP24','ANAPC15','PSMD14','COP1']
-tissues_of_interest = ['Brain_Cortex','Brain_Hippocampus','Liver']#,'Thyroid','Stomach','Liver']
+tissues_of_interest = ['Brain_Cortex','Brain_Hippocampus','Liver','Thyroid']#,'Stomach','Liver']
 
 print("################################################")
 print("> TESTING <")
@@ -31,10 +31,10 @@ print()
 multidgene = MultiDGene(genes_of_interest, tissues_of_interest, verbose=True)
 
 # Data processing
-multidimensional_network = multidgene.construct_multidimensional_network()
+multidimensional_network, edge_colors = multidgene.construct_multidimensional_network()
 
 # Plotting multidimensional_network, if output_path None the figure will not be saved as file.
-multidgene.plot(multidimensional_network)
+multidgene.plot(multidimensional_network, edge_colors=edge_colors)
 
 # Storing multidimensional_network as set of edgelist, one per layer
 #multidgene.save_as_files(multidimensional_network,output_path=WORKSPACE)

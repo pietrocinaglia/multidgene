@@ -43,8 +43,8 @@ multidgene = MultiDGene(genes_of_interest:list, tissues_of_interest:list=[], thr
 
 4. Use the following methods:
 
-- construct_multidimensional_network() -> pymnet.MultilayerNetwork
-- plot(multilayer_network:pymnet.MultilayerNetwork, output_path:str=None)
+- construct_multidimensional_network() -> tuple[pymnet.MultilayerNetwork, set]
+- plot(multilayer_network:pymnet.MultilayerNetwork, edgeColors:set={}, output_path:str=None)
 - save_as_files(multilayer_network:pymnet.MultilayerNetwork, output_path:str):
 
 

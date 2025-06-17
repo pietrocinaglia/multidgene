@@ -56,11 +56,13 @@ class MultiDGene:
         
         print("[INFO] Loading metadata...")
         
+        self.verbose = verbose
+
         self.genes_of_interest = genes_of_interest
         self.tissues_of_interest = tissues_of_interest
+
         if p_threshold > 0:
             self.p_threshold = p_threshold
-        self.verbose = verbose
 
         # reading metadata
         df = pd.read_csv(self.WORKSPACE+'metadata.csv', header=0, sep = " ")
@@ -96,43 +98,62 @@ class MultiDGene:
 
         return data
     
-    def construct_multidimensional_network(self) -> pymnet.MultilayerNetwork:
+    def construct_multidimensional_network(self) -> tuple[pymnet.MultilayerNetwork, set]:
         if self.verbose == True:
             print("[INFO] Data Retrieving...")       
 
         df = self.__retrieve_gtex_data()
 
-        print(df) ###################
-
         gene_pairs = list(combinations(self.gene_symbol_ids_of_interest, 2))
 
+        multilayer_network = pymnet.MultilayerNetwork(aspects=1, directed=False, fullyInterconnected=True)
+        edge_colors = {}
+
         if self.verbose == True:
-            print("- Data concerning gene expression across human tissues [OK] ")
+            print("- [OK] ")
             print()
             print("[INFO] Multi-Dimensional Network Construction...")
         
+        multilayer_network, edge_colors = self.__inferring_intralayer_edges(df, gene_pairs, multilayer_network, edge_colors)
+
+        layer_pairs = list(combinations(self.tissues_of_interest, 2))
+        multilayer_network, edge_colors = self.__inferring_interlayer_edges(df, self.gene_symbol_ids_of_interest, self.tissues_of_interest, multilayer_network, edge_colors)
+
+
+        '''
         # Only for testing (1/2)
         with open(self.WORKSPACE+'statistics_result.csv', 'w', newline='') as file:
             writer = csv.writer(file)
             field = ['gene1', 'gene2', 'tissue', 's', 'p', 'is_significative']
             writer.writerow(field)
+        # Only for testing (2/2)
+        with open(self.WORKSPACE+'statistics_result.csv', 'a', newline='') as file:
+            writer = csv.writer(file)
+            # if p < self.p_threshold and (s > self.s_threshold[0] and s < self.s_threshold[1]):
+            writer.writerow([u, v, current_tissue, s, p, ('yes' if p < self.p_threshold and (s > self.s_threshold[0] and s < self.s_threshold[1]) else 'no')])
+        '''
 
-        multilayer_network = pymnet.MultilayerNetwork()
+        if self.verbose == True:
+            print("- Multilayer Network modelled.")
+        
+        return multilayer_network, edge_colors
 
-        for i in range(len(self.tissues_of_interest)):
+    def __inferring_intralayer_edges(self, df:pd.DataFrame, gene_pairs:list, multilayer_network:pymnet.MultilayerNetwork, edge_colors:set) -> tuple[pymnet.MultilayerNetwork, set]:
 
-            current_tissue = self.tissues_of_interest[i]
+        if self.verbose == True:
+            print("- Inferring intra-layer edges...")
 
-            multilayer_network.add_layer(current_tissue)
+        for current_layer in self.tissues_of_interest:
+
+            multilayer_network.add_layer(current_layer)
 
             if self.verbose == True:
-                print("- Layer " + str(i+1) + " (" + str(current_tissue) + ") ...")
+                print("-- Layer " + str(current_layer) + ") ...")
 
-            ### Work in progress
             for u, v in gene_pairs:
-                
-                u_data = df.loc[ (df['geneSymbol'] == u) & (df['unit'] == self.UNIT) & (df['tissueSiteDetailId'] == current_tissue) ]
-                v_data = df.loc[ (df['geneSymbol'] == v) & (df['unit'] == self.UNIT) & (df['tissueSiteDetailId'] == current_tissue) ]
+
+                u_data = df.loc[ (df['geneSymbol'] == u) & (df['unit'] == self.UNIT) & (df['tissueSiteDetailId'] == current_layer) ]
+                v_data = df.loc[ (df['geneSymbol'] == v) & (df['unit'] == self.UNIT) & (df['tissueSiteDetailId'] == current_layer) ]
                 
                 if (u_data.empty or v_data.empty):
                     continue
@@ -145,44 +166,56 @@ class MultiDGene:
                         raise Warning("Size of sample less than 3; skipped.")
                     continue
 
-                s, p = scipy.stats.pearsonr(u_gexp, v_gexp)
-                
-                p = round(p, 8)
+                s, p = scipy.stats.pearsonr(x=u_gexp, y=v_gexp, alternative='two-sided')
+
                 if p < self.p_threshold and (s > self.s_threshold[0] and s < self.s_threshold[1]):
-                    #current_layer.add_edge(u,v, pvalue=p)
-                    multilayer_network[u,v,current_tissue,current_tissue] = self.p_threshold
-                
-                # Only for testing (2/2)
-                with open(self.WORKSPACE+'statistics_result.csv', 'a', newline='') as file:
-                    writer = csv.writer(file)
-                    # if p < self.p_threshold and (s > self.s_threshold[0] and s < self.s_threshold[1]):
-                    writer.writerow([u, v, current_tissue, s, p, ('yes' if p < self.p_threshold and (s > self.s_threshold[0] and s < self.s_threshold[1]) else 'no')])
+                #if p < self.p_threshold:
+                    multilayer_network[u,v,current_layer] = self.p_threshold
+                    edge_colors[((u, current_layer), (v, current_layer))] = 'blue'
 
             if self.verbose == True:
                 print("-- [OK]")
+
+        return multilayer_network, edge_colors
+
+
+    def __inferring_interlayer_edges(self, df:pd.DataFrame, genes:list, layers:list, multilayer_network:pymnet.MultilayerNetwork, edge_colors:set) -> tuple[pymnet.MultilayerNetwork, set]:
         
         if self.verbose == True:
-            print("- Multilayer Network built.")
+            print("- Inferring inter-layer edges...")
 
-        return multilayer_network
+        for i in range(len(layers)):
+            j = i + 1
+            if j > (len(layers)-1):
+                break
 
-    def plot(self, multilayer_network:pymnet.MultilayerNetwork, output_path:str=None):
+            for g in genes:
+                multilayer_network[g,g,layers[i],layers[j]] = self.p_threshold
+                edge_colors[((g, layers[i]), (g, layers[j]))] = 'green'
+
+        if self.verbose == True:
+            print("--- [OK]")
+
+        return multilayer_network, edge_colors
+    
+    def plot(self, multilayer_network:pymnet.MultilayerNetwork, edge_colors:set={}, output_path:str=None):
         
         fig = pymnet.draw(
             multilayer_network,
-            autoscale = True,
             layershape='rectangle',
             layerPadding=0.2,
-            #defaultLayerColor = "#DDDDDD",
+            defaultLayerColor = "#BDBBBB",
             defaultLayerLabelLoc = (1.1,1.1),
-            defaultLayerLabelColor = 'blue',
-            defaultNodeLabelColor = 'black',
-            defaultNodeColor = 'black',
-            nodeSizeRule = {'rule': 'scaled', 'scalecoeff': 0.1},
-            defaultEdgeColor = 'green',
+            defaultLayerLabelColor = "#6E6E6E",
+            defaultNodeLabelColor = "#000000",
+            defaultNodeColor = "#000000",
+            nodeSizeRule = {'rule': 'scaled', 'scalecoeff': 0.2},
+            defaultEdgeColor = 'black',
+            edgeColorDict = edge_colors,
             defaultNodeLabelSize = 6,
             alignedNodes = True,
-            figsize = (7,4)
+            figsize = (7,4),
+            autoscale = True,
             )
         
         if output_path is not None:
