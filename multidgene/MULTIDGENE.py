@@ -119,7 +119,6 @@ class MultiDGene:
         layer_pairs = list(combinations(self.tissues_of_interest, 2))
         multilayer_network, edge_colors = self.__inferring_interlayer_edges(df, self.gene_symbol_ids_of_interest, self.tissues_of_interest, multilayer_network, edge_colors)
 
-
         '''
         # Only for testing (1/2)
         with open(self.WORKSPACE+'statistics_result.csv', 'w', newline='') as file:
