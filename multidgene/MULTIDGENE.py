@@ -22,15 +22,15 @@ import csv
 class MultiDGene:
     WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
     #
-    UNIT = 'TPM'
-    DATASETID = "gtex_v10"
+    UNIT = 'TPM' # 'TPM' 'read count' 'log(CP10K)'
+    DATASET_ID = 'gtex_v10' # 'gtex_v8' 'gtex_v10'
     LIMIT = 100000 # Max is 100000
     #
     gene_symbol_ids_of_interest = list()
     gene_code_ids_of_interest = list()
     tissues_of_interest = list()
     p_threshold = 10e-8
-    s_threshold = [0.5,0.9]
+    s_threshold = [0.5,0.9] # lower and upper limit
     verbose = False
     #
 
@@ -79,22 +79,25 @@ class MultiDGene:
 
         pass
   
-    def __retrieve_gtex_data(self) -> pd.DataFrame:
-        result = None
-
+    def __retrieve_gtex_data(self, page_i=0) -> pd.DataFrame:
+        
         api = "https://gtexportal.org/api/v2/expression/geneExpression"
         #api = "https://gtexportal.org/api/v2/expression/medianGeneExpression"
-        params = {'itemsPerPage': self.LIMIT, 'datasetId': self.DATASETID, 'gencodeId': self.gene_code_ids_of_interest, 'tissueSiteDetailId': self.tissues_of_interest, 'format':'json'}
+        params = {'datasetId': self.DATASET_ID, 'itemsPerPage': self.LIMIT, 'page': page_i, 'gencodeId': self.gene_code_ids_of_interest, 'tissueSiteDetailId': self.tissues_of_interest, 'format':'json'}
         result =  requests.get( api, params ).json()
     
         # Checking result
-        if result is None:
+        if result is None or 'data' not in result:
             raise Exception("An error occurring in data retrieving.")
         
         data = pd.DataFrame(result['data'])
 
         if len(self.tissues_of_interest) == 0:
             self.tissues_of_interest = list(data["tissueSiteDetailId"].unique())
+
+        #data = data.loc[(data['unit'] == self.UNIT)]
+
+        print(data)
 
         return data
     
@@ -116,7 +119,7 @@ class MultiDGene:
         
         multilayer_network, edge_colors = self.__inferring_intralayer_edges(df, gene_pairs, multilayer_network, edge_colors)
 
-        layer_pairs = list(combinations(self.tissues_of_interest, 2))
+        # layer_pairs = list(combinations(self.tissues_of_interest, 2))
         multilayer_network, edge_colors = self.__inferring_interlayer_edges(df, self.gene_symbol_ids_of_interest, self.tissues_of_interest, multilayer_network, edge_colors)
 
         '''
@@ -151,8 +154,8 @@ class MultiDGene:
 
             for u, v in gene_pairs:
 
-                u_data = df.loc[ (df['geneSymbol'] == u) & (df['unit'] == self.UNIT) & (df['tissueSiteDetailId'] == current_layer) ]
-                v_data = df.loc[ (df['geneSymbol'] == v) & (df['unit'] == self.UNIT) & (df['tissueSiteDetailId'] == current_layer) ]
+                u_data = df.loc[ (df['geneSymbol'] == u) & (df['tissueSiteDetailId'] == current_layer) ]
+                v_data = df.loc[ (df['geneSymbol'] == v) & (df['tissueSiteDetailId'] == current_layer) ]
                 
                 if (u_data.empty or v_data.empty):
                     continue
@@ -168,7 +171,6 @@ class MultiDGene:
                 s, p = scipy.stats.pearsonr(x=u_gexp, y=v_gexp, alternative='two-sided')
 
                 if p < self.p_threshold and (s > self.s_threshold[0] and s < self.s_threshold[1]):
-                #if p < self.p_threshold:
                     multilayer_network[u,v,current_layer] = self.p_threshold
                     edge_colors[((u, current_layer), (v, current_layer))] = 'blue'
 
