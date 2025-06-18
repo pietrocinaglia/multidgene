@@ -119,7 +119,7 @@ class MultiDGene:
 
         if self.verbose == True:
             print()
-            print("[INFO] Multi-Dimensional Network -Successfully- Modelled")
+            print("[INFO] Multi-Dimensional Network Successfully Modelled")
             print()
         
         return multilayer_network, edge_colors

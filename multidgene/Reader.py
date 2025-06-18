@@ -48,9 +48,7 @@ class GTExDataReader:
     def load_gene_expression_read_counts_from_file(self) -> pd.DataFrame:
 
         source_path = self.data_path + 'GTEx_Analysis_v10_RNASeQCv2.4.2_gene_reads.gct.gz'
-
         # index_col => [ 0 is Ensembl-Id, 1 is Gene Name ]
-        
         df = pd.read_csv(source_path, delimiter='\t', header=2, index_col=1, compression='infer')  
 
         return df
