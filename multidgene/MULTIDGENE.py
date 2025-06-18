@@ -85,7 +85,7 @@ class MultiDGene:
         self.tissues_of_interest = tissues_of_interest
 
 
-        print("- [OK] ")
+        print("[OK] ")
         print()
         pass
       
@@ -118,18 +118,20 @@ class MultiDGene:
         '''
 
         if self.verbose == True:
-            print("- Multilayer Network modelled.")
+            print()
+            print("[INFO] Multi-Dimensional Network -Successfully- Modelled")
+            print()
         
         return multilayer_network, edge_colors
 
-    def __inferring_intralayer_edges(self, df:pd.DataFrame, gene_pairs:list, multilayer_network:pymnet.MultilayerNetwork, edge_colors:set) -> tuple[pymnet.MultilayerNetwork, set]:
+    def __inferring_intralayer_edges(self, df:pd.DataFrame, gene_pairs:list, multidimensional_network:pymnet.MultilayerNetwork, edge_colors:set) -> tuple[pymnet.MultilayerNetwork, set]:
 
         if self.verbose == True:
-            print("- Inferring intra-layer edges...")
+            print("-> Inferring intra-layer edges...")
 
         for current_layer in self.tissues_of_interest:
 
-            multilayer_network.add_layer(current_layer)
+            multidimensional_network.add_layer(current_layer)
 
             if self.verbose == True:
                 print("-- Layer " + str(current_layer) + ") ...")
@@ -153,19 +155,19 @@ class MultiDGene:
                 s, p = scipy.stats.pearsonr(x=u_gexp, y=v_gexp, alternative='two-sided')
 
                 if p < self.p_threshold and (s > self.s_threshold[0] and s < self.s_threshold[1]):
-                    multilayer_network[u,v,current_layer] = self.p_threshold
+                    multidimensional_network[u,v,current_layer] = self.p_threshold
                     edge_colors[((u, current_layer), (v, current_layer))] = 'blue'
 
-            if self.verbose == True:
-                print("-- [OK]")
+        if self.verbose == True:
+            print("- [OK]")
 
-        return multilayer_network, edge_colors
+        return multidimensional_network, edge_colors
 
 
-    def __inferring_interlayer_edges(self, df:pd.DataFrame, genes:list, layers:list, multilayer_network:pymnet.MultilayerNetwork, edge_colors:set) -> tuple[pymnet.MultilayerNetwork, set]:
+    def __inferring_interlayer_edges(self, df:pd.DataFrame, genes:list, layers:list, multidimensional_network:pymnet.MultilayerNetwork, edge_colors:set) -> tuple[pymnet.MultilayerNetwork, set]:
         
         if self.verbose == True:
-            print("- Inferring inter-layer edges...")
+            print("-> Inferring inter-layer edges...")
 
         for i in range(len(layers)):
             j = i + 1
@@ -173,18 +175,18 @@ class MultiDGene:
                 break
 
             for g in genes:
-                multilayer_network[g,g,layers[i],layers[j]] = self.p_threshold
+                multidimensional_network[g,g,layers[i],layers[j]] = self.p_threshold
                 edge_colors[((g, layers[i]), (g, layers[j]))] = 'green'
 
         if self.verbose == True:
-            print("--- [OK]")
+            print("- [OK]")
 
-        return multilayer_network, edge_colors
+        return multidimensional_network, edge_colors
     
-    def plot(self, multilayer_network:pymnet.MultilayerNetwork, edge_colors:set={}, output_path:str=None):
+    def plot(self, multidimensional_network:pymnet.MultilayerNetwork, edge_colors:set={}, output_path:str=None):
         
         fig = pymnet.draw(
-            multilayer_network,
+            multidimensional_network,
             layershape='rectangle',
             layerPadding=0.2,
             defaultLayerColor = "#BDBBBB",
@@ -202,7 +204,7 @@ class MultiDGene:
             )
         
         if output_path is not None:
-            filepath = output_path + "multilayer_network"
+            filepath = output_path + "multidimensional_network"
             fig.savefig(filepath + ".pdf")
             #pymnet.webplot(multilayer_network, outputfile=filepath + ".html")
             print("- Plot saved as file [OK]")
@@ -217,4 +219,4 @@ class MultiDGene:
         filepath = output_path + "multilayer_network.txt"
 
         pymnet.write_edge_file(multilayer_network, filepath, sep='\t', weights=True, numericNodes=False)
-        print("- multilayer Network saved as file [OK]")
+        print("- Multi-Dimensional Network saved as file [OK]")
