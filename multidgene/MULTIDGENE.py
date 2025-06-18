@@ -5,10 +5,10 @@ import requests
 import pymnet
 import pandas as pd
 import scipy
-import statistics
 from itertools import combinations
 import matplotlib.pyplot as plt
 import csv
+import statistics
 
 ###
 # @project: multi-DGeNe
@@ -19,15 +19,17 @@ import csv
 # @url: https://github.com/pietrocinaglia/multidgene
 ###
 
+from .Reader import GTExDataReader
+
 class MultiDGene:
     WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
     #
-    UNIT = 'TPM' # 'TPM' 'read count' 'log(CP10K)'
-    DATASET_ID = 'gtex_v10' # 'gtex_v8' 'gtex_v10'
-    LIMIT = 100000 # Max is 100000
-    #
+    GTExData = None
+    gene_expression_read_counts = None
+    gene_expression_tpm = None
     gene_symbol_ids_of_interest = list()
     gene_code_ids_of_interest = list()
+    #
     tissues_of_interest = list()
     p_threshold = 10e-8
     s_threshold = [0.5,0.9] # lower and upper limit
@@ -35,6 +37,8 @@ class MultiDGene:
     #
 
     def __init__(self, genes_of_interest:list, tissues_of_interest:list=[], p_threshold:float=0, verbose:bool=False):
+        self.verbose = verbose
+        
         if len(genes_of_interest) == 0:
             raise Exception("Genes of interest ('genes_of_interest:list') are mandatory; this list cannot be empty or none.")
 
@@ -43,84 +47,62 @@ class MultiDGene:
             print( " --------------------------------------------------------------" )
             print( " >        multi-Dimensional Gene Network (multi-DGeNe)        <" )
             print( " --------------------------------------------------------------" )
-            print( "  Description:\tMulti-Dimensional Gene Network (multi-DGeNe)   " )
+            print( " Description:\tMulti-Dimensional Gene Network (multi-DGeNe)    " )
             print( "              \tinference based on Weighted Gene Co-expression " )
-            print( "              \t Network Analysis (WGCNA) across human tissues." )
+            print( "              \tNetwork Analysis (WGCNA) across human tissues. " )
             print( " --------------------------------------------------------------" )
-            print( "  Version:\t0.1                                                " )
-            print( "  GitHub:\t" + "https://github.com/pietrocinaglia/multidgene   " )
-            print( "  Contact:\tPietro Cinaglia (cinaglia@unicz.it)                " )
+            print( " Version:\t0.1                                                 " )
+            print( " GitHub:\t" + "https://github.com/pietrocinaglia/multidgene    " )
+            print( " Contact:\tPietro Cinaglia (cinaglia@unicz.it)                 " )
             print( " --------------------------------------------------------------" )
             print( "***************************************************************" )
             print()
         
-        print("[INFO] Loading metadata...")
-        
-        self.verbose = verbose
+        if self.verbose == True:
+            print("[INFO] Initialization...")
 
         self.genes_of_interest = genes_of_interest
-        self.tissues_of_interest = tissues_of_interest
 
         if p_threshold > 0:
             self.p_threshold = p_threshold
 
-        # reading metadata
-        df = pd.read_csv(self.WORKSPACE+'metadata.csv', header=0, sep = " ")
+        self.GTExData = GTExDataReader()
 
-        # filtering metadata
-        df = df[ df['gene_symbol'].isin(self.genes_of_interest) ]
-
-        # dataframe to dictionary
-        metadata = dict(zip(df.gene_symbol,df.ensembl_id))
-        self.gene_symbol_ids_of_interest = list(metadata.keys())
-        self.gene_code_ids_of_interest = list(metadata.values())
-
-        print("- Metadata loaded [OK] ")
-
-        pass
-  
-    def __retrieve_gtex_data(self, page_i=0) -> pd.DataFrame:
-        
-        api = "https://gtexportal.org/api/v2/expression/geneExpression"
-        #api = "https://gtexportal.org/api/v2/expression/medianGeneExpression"
-        params = {'datasetId': self.DATASET_ID, 'itemsPerPage': self.LIMIT, 'page': page_i, 'gencodeId': self.gene_code_ids_of_interest, 'tissueSiteDetailId': self.tissues_of_interest, 'format':'json'}
-        result =  requests.get( api, params ).json()
-    
-        # Checking result
-        if result is None or 'data' not in result:
-            raise Exception("An error occurring in data retrieving.")
-        
-        data = pd.DataFrame(result['data'])
-
-        if len(self.tissues_of_interest) == 0:
-            self.tissues_of_interest = list(data["tissueSiteDetailId"].unique())
-
-        #data = data.loc[(data['unit'] == self.UNIT)]
-
-        print(data)
-
-        return data
-    
-    def construct_multidimensional_network(self) -> tuple[pymnet.MultilayerNetwork, set]:
         if self.verbose == True:
-            print("[INFO] Data Retrieving...")       
+            print("- Loading Metadata...")
+        gene_symbol_ids_of_interest, gene_code_ids_of_interest = self.GTExData.load_metadata_from_file(genes_of_interest)
+        self.gene_symbol_ids_of_interest = gene_symbol_ids_of_interest
+        self.gene_code_ids_of_interest = gene_code_ids_of_interest
 
-        df = self.__retrieve_gtex_data()
+        if self.verbose == True:
+            print("- Gene Expression Read Counts Loading...")
+        # self.gene_expression_read_counts = self.GTExData.load_gene_expression_read_counts_from_file()
+
+        if self.verbose == True:
+            print("- Retrieving Gene Expression TPM...")
+        gene_expression_tpm, tissues_of_interest = self.GTExData.retrieve_gene_expression_tpm_from_api(self.gene_code_ids_of_interest, tissues_of_interest)
+        self.gene_expression_tpm = gene_expression_tpm
+        self.tissues_of_interest = tissues_of_interest
+
+
+        print("- [OK] ")
+        print()
+        pass
+      
+    def construct_multidimensional_network(self) -> tuple[pymnet.MultilayerNetwork, set]:
+        
+        if self.verbose == True:
+            print("[INFO] Multi-Dimensional Network Construction...")
 
         gene_pairs = list(combinations(self.gene_symbol_ids_of_interest, 2))
 
         multilayer_network = pymnet.MultilayerNetwork(aspects=1, directed=False, fullyInterconnected=True)
         edge_colors = {}
 
-        if self.verbose == True:
-            print("- [OK] ")
-            print()
-            print("[INFO] Multi-Dimensional Network Construction...")
-        
-        multilayer_network, edge_colors = self.__inferring_intralayer_edges(df, gene_pairs, multilayer_network, edge_colors)
+        multilayer_network, edge_colors = self.__inferring_intralayer_edges(self.gene_expression_tpm, gene_pairs, multilayer_network, edge_colors)
 
         # layer_pairs = list(combinations(self.tissues_of_interest, 2))
-        multilayer_network, edge_colors = self.__inferring_interlayer_edges(df, self.gene_symbol_ids_of_interest, self.tissues_of_interest, multilayer_network, edge_colors)
+        multilayer_network, edge_colors = self.__inferring_interlayer_edges(self.gene_expression_tpm, self.gene_symbol_ids_of_interest, self.tissues_of_interest, multilayer_network, edge_colors)
 
         '''
         # Only for testing (1/2)
