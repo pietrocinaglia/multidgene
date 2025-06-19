@@ -14,7 +14,6 @@ import statistics
 # @project: multi-DGeNe
 # @author: Pietro Cinaglia
 # @mail: cinaglia@unicz.it
-# @mail: cinaglia@unicz.it
 # @description: Multi-Dimensional Gene Network (multi-DGeNe) inference based on Weighted Gene Co-expression Network Analysis (WGCNA) across human tissues.
 # @url: https://github.com/pietrocinaglia/multidgene
 ###

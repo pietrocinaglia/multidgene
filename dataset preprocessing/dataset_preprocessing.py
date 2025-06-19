@@ -8,7 +8,6 @@ simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 # @project: multi-DGeNe (PRE-PROCESSING: DATASET CONSTRUCTION)
 # @author: Pietro Cinaglia
 # @mail: cinaglia@unicz.it
-# @mail: cinaglia@unicz.it
 # @description: Multi-Dimensional Gene Network (multi-DGeNe) inference based on Weighted Gene Co-expression Network Analysis (WGCNA) across human tissues. This is used for preprocessing in order to build a (whole) dataset from the fragmented GTEx's data.
 # @url: https://github.com/pietrocinaglia/multidgene
 ###
