@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import numpy as np
 
 from warnings import simplefilter
 simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
@@ -18,7 +19,7 @@ OUTPUT_FILE_PATH = WORKSPACE + 'gene_reads_v10_by_tissue.parquet.zstd'
 FILE_LIST = WORKSPACE + 'tissues.csv'
 DATA_DIR = WORKSPACE + 'gene_read_counts_by_tissue/' # put here all .gct.gz for the read counts data by tissue (see "Gene read counts by tissue" at https://gtexportal.org/home/downloads/adult-gtex/bulk_tissue_expression)
 
-all_data = []
+combined_df = None
 all_columns = set()
 
 print("Collecting tissue identifiers...")
@@ -38,20 +39,21 @@ for file in file_names.iloc[:, 1]:
     print("\t - " + file)
     try:
         df = pd.read_csv(file_path, delimiter='\t', header=2, compression='infer')
-        missing_cols = all_columns - set(df.columns)
-        for col in missing_cols:
-            df[col] = 0
+        #missing_cols = all_columns - set(df.columns)
+        #for col in missing_cols:
+            #df[col] = 0
         # Reorder columns consistently
-        df = df[list(all_columns)] 
+        #df = df[list(all_columns)]
+        
         # Add a column with the tissue name
-        df['source_file'] = file  
-        all_data.append(df)
+        df['source_file'] = file
+        if combined_df is None:
+            combined_df = df
+        else:
+            combined_df = pd.concat([combined_df, df], axis=0, copy=False, ignore_index=True)
         print("\t -- [OK]" )
     except Exception as e:
         print(f"Error reading {file_path}: {e}")
-
-print("Data concatenation...")
-combined_df = pd.concat(all_data, ignore_index=True)
 
 print("Storing data as file (.parquet with ZSTD compression)...")
 combined_df.to_parquet(OUTPUT_FILE_PATH, index=False, compression='zstd')
