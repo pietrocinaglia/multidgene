@@ -168,6 +168,8 @@ class MultiDGene:
         
         if self.verbose == True:
             print("-> Inferring inter-layer edges...")
+            
+        u_data = df.loc[ (df['geneSymbol'] == u) & (df['tissueSiteDetailId'] == current_layer) ]
 
         for i in range(len(layers)):
             j = i + 1
