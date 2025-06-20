@@ -3,9 +3,12 @@
 '''
 
 import os
+
 import pandas as pd
 from warnings import simplefilter
 simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+
+import pickle as pk
 
 ###
 # @project: multi-DGeNe (PRE-PROCESSING: DATASET CONSTRUCTION)
@@ -19,32 +22,39 @@ WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 FILE_LIST = WORKSPACE + 'tissues.csv'
 DATA_DIR = WORKSPACE + 'gene_read_counts_by_tissue/' # put here all .gct.gz for the read counts data by tissue (see "Gene read counts by tissue" at https://gtexportal.org/home/downloads/adult-gtex/bulk_tissue_expression)
-OUTPUT_FILE_PATH = WORKSPACE + 'gene_reads_v10_by_tissue.parquet'
+OUTPUT_FILE_PATH = WORKSPACE + 'gene_reads_v10_by_tissue'
 COMBINING_OUTPUT = False
 
-tissue_names = pd.read_csv(FILE_LIST)
-
 print("Loading files:")
+tissue_names = pd.read_csv(FILE_LIST)
 data = []
-for tissue in tissue_names.iloc[:, 1]:
+for tissue in tissue_names.iloc[:, 1]: # names are located in (index) 1
     file_path = os.path.join(DATA_DIR, "gene_reads_v10_"+tissue.lower()+".gct.gz")
     print("\t - " + tissue)
     try:
         df = pd.read_csv(file_path, delimiter='\t', header=2, compression='infer')
         df['tissue'] = tissue
-
-        data.extend(df.to_dict(orient='records')) # duct optimize memory usage in combining pd.DataFrame
-
+        data.extend(df.to_dict(orient='records')) # dict optimize memory usage in combining pd.DataFrame
         print("\t -- [OK]" )
     except Exception as e:
         print(f"Error reading {file_path}: {e}")
 
-print("Combining data...")
+print("Storing data as file...")
+with open(OUTPUT_FILE_PATH+'.pkl', 'wb') as fp:
+    pk.dump(data, fp)
+
+'''
+print("Loading data from file...")
+data = None
+with open(OUTPUT_FILE_PATH+'.pkl', 'rb') as fp:
+    data = pk.load(fp)
+    
+print("Converting to dataframe...")
 gene_reads_v10_by_tissue = pd.DataFrame(data)
 data = None
 
-# Preview
-print(gene_reads_v10_by_tissue.head(2))
+print("Storing data as file...")
+gene_reads_v10_by_tissue.to_parquet(OUTPUT_FILE_PATH+'.parquet', index=False, compression='zstd') # , partition_cols=['tissue']) # compression='snappy'
+'''
 
-print("Storing data as file (compressed .parquet)...")
-gene_reads_v10_by_tissue.to_parquet(OUTPUT_FILE_PATH, index=False, compression='zstd') # , partition_cols=['tissue']) # compression='snappy'
+print("[ DONE ]")
