@@ -1,7 +1,9 @@
+'''
+' NOTE: 'pip install pyarrow' for parquet support
+'''
+
 import os
 import pandas as pd
-import numpy as np
-
 from warnings import simplefilter
 simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 
@@ -14,49 +16,35 @@ simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 ###
 
 WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
-OUTPUT_FILE_PATH = WORKSPACE + 'gene_reads_v10_by_tissue.parquet.zstd'
 
 FILE_LIST = WORKSPACE + 'tissues.csv'
 DATA_DIR = WORKSPACE + 'gene_read_counts_by_tissue/' # put here all .gct.gz for the read counts data by tissue (see "Gene read counts by tissue" at https://gtexportal.org/home/downloads/adult-gtex/bulk_tissue_expression)
+OUTPUT_FILE_PATH = WORKSPACE + 'gene_reads_v10_by_tissue.parquet'
+COMBINING_OUTPUT = False
 
-combined_df = None
-all_columns = set()
-
-print("Collecting tissue identifiers...")
-file_names = pd.read_csv(FILE_LIST)
-#
-for file in file_names.iloc[:, 1]:  # tissue names are in the second column
-    file_path = os.path.join(DATA_DIR, "gene_reads_v10_"+file.lower()+".gct.gz")
-    try:
-        df = pd.read_csv(file_path, delimiter='\t', header=2, compression='infer')
-        all_columns.update(df.columns)
-    except Exception as e:
-        print(f"Error reading {file_path}: {e}")
+tissue_names = pd.read_csv(FILE_LIST)
 
 print("Loading files:")
-for file in file_names.iloc[:, 1]:
-    file_path = os.path.join(DATA_DIR, "gene_reads_v10_"+file.lower()+".gct.gz")
-    print("\t - " + file)
+data = []
+for tissue in tissue_names.iloc[:, 1]:
+    file_path = os.path.join(DATA_DIR, "gene_reads_v10_"+tissue.lower()+".gct.gz")
+    print("\t - " + tissue)
     try:
         df = pd.read_csv(file_path, delimiter='\t', header=2, compression='infer')
-        #missing_cols = all_columns - set(df.columns)
-        #for col in missing_cols:
-            #df[col] = 0
-        # Reorder columns consistently
-        #df = df[list(all_columns)]
-        
-        # Add a column with the tissue name
-        df['source_file'] = file
-        if combined_df is None:
-            combined_df = df
-        else:
-            combined_df = pd.concat([combined_df, df], axis=0, copy=False, ignore_index=True)
+        df['tissue'] = tissue
+
+        data.extend(df.to_dict(orient='records')) # duct optimize memory usage in combining pd.DataFrame
+
         print("\t -- [OK]" )
     except Exception as e:
         print(f"Error reading {file_path}: {e}")
 
-print("Storing data as file (.parquet with ZSTD compression)...")
-combined_df.to_parquet(OUTPUT_FILE_PATH, index=False, compression='zstd')
+print("Combining data...")
+gene_reads_v10_by_tissue = pd.DataFrame(data)
+data = None
 
 # Preview
-print(combined_df.head(2))
+print(gene_reads_v10_by_tissue.head(2))
+
+print("Storing data as file (compressed .parquet)...")
+gene_reads_v10_by_tissue.to_parquet(OUTPUT_FILE_PATH, index=False, compression='zstd') # , partition_cols=['tissue']) # compression='snappy'
