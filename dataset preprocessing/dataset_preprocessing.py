@@ -8,6 +8,7 @@ import pandas as pd
 from warnings import simplefilter
 simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 
+import numpy as np
 import pickle as pk
 
 ###
@@ -25,23 +26,43 @@ DATA_DIR = WORKSPACE + 'gene_read_counts_by_tissue/' # put here all .gct.gz for 
 OUTPUT_FILE_PATH = WORKSPACE + 'gene_reads_v10_by_tissue'
 COMBINING_OUTPUT = False
 
-print("Loading files:")
+print("Loading tissue identifiers...")
 tissue_names = pd.read_csv(FILE_LIST)
+
+print("Collecting samples identifiers...")
+sample_ids = set()
+for tissue in tissue_names.iloc[:, 1]:  # tissue names are in the second column
+    file_path = os.path.join(DATA_DIR, "gene_reads_v10_"+tissue.lower()+".gct.gz")
+    try:
+        df = pd.read_csv(file_path, delimiter='\t', header=2, nrows=1, compression='infer')
+        sample_ids.update(df.columns)
+    except Exception as e:
+        print(f"Error reading {file_path}: {e}")
+
+print("Defining resulting data model...")
+df_model = pd.DataFrame(columns=['tissue']+list(sample_ids))
+
+print("Loading files:")
 data = []
 for tissue in tissue_names.iloc[:, 1]: # names are located in (index) 1
     file_path = os.path.join(DATA_DIR, "gene_reads_v10_"+tissue.lower()+".gct.gz")
     print("\t - " + tissue)
     try:
-        df = pd.read_csv(file_path, delimiter='\t', header=2, compression='infer')
-        df['tissue'] = tissue
-        data.extend(df.to_dict(orient='records')) # dict optimize memory usage in combining pd.DataFrame
+        tmp = pd.read_csv(file_path, delimiter='\t', header=2, compression='infer')
+        tmp = pd.concat([df_model, tmp]) # port to reference model
+        tmp['tissue'] = tissue
+        #data.extend(df.to_dict(orient='records')) # dict optimize memory usage in combining pd.DataFrame
+        data.append(df.to_numpy())
         print("\t -- [OK]" )
     except Exception as e:
         print(f"Error reading {file_path}: {e}")
 
+print("Concatenating data as file...")
+output = np.concatenate(data)
+
 print("Storing data as file...")
 with open(OUTPUT_FILE_PATH+'.pkl', 'wb') as fp:
-    pk.dump(data, fp)
+    pk.dump(output, fp)
 
 '''
 print("Loading data from file...")
