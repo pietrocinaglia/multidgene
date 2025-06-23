@@ -27,7 +27,7 @@ print("- Tissues: " + str(tissues_of_interest))
 print("################################################")
 print()
 
-multidgene = MultiDGene(genes_of_interest, tissues_of_interest, verbose=True)
+multidgene = MultiDGene(genes_of_interest, tissues_of_interest, data_path=WORKSPACE+'data/', verbose=True)
 
 # Data processing
 multidimensional_network, edge_colors = multidgene.construct_multidimensional_network()

@@ -2,7 +2,6 @@
 
 import os
 import pandas as pd
-import numpy as np
 import requests
 
 ###
@@ -20,8 +19,9 @@ class GTExDataReader:
     LIMIT = 100000 # Max is 100000
     #
     data_path = None
+    verbose = True
 
-    def __init__(self, data_path:str=None):
+    def __init__(self, data_path:str=None, verbose:bool=True):
 
         # default data_path
         if data_path is None: 
@@ -29,9 +29,14 @@ class GTExDataReader:
         else:
             self.data_path = data_path
 
+        self.verbose = verbose
+
         pass
     
     def load_metadata_from_file(self, genes_of_interest):
+
+        if self.verbose == True:
+            print("- Loading Metadata from file...")
 
         source_path = self.data_path + 'metadata.csv'
 
@@ -44,18 +49,44 @@ class GTExDataReader:
 
         return gene_symbol_ids_of_interest, gene_code_ids_of_interest
     
-    def load_gene_expression_read_counts_from_file(self) -> pd.DataFrame:
+    def load_gene_expression_read_counts_from_file(self, gene_code_ids_of_interest:list, tissues_of_interest:list=None) -> pd.DataFrame:
 
-        source_path = self.data_path + 'GTEx_Analysis_v10_RNASeQCv2.4.2_gene_reads.gct.gz'
-        # index_col => [ 0 is Ensembl-Id, 1 is Gene Name ]
-        df = pd.read_csv(source_path, delimiter='\t', header=2, index_col=1, compression='infer')  
+        if self.verbose == True:
+            print("- Retrieving Gene Expression Read Counts by tissue (from file)...")
 
-        return df
+        if tissues_of_interest is None:
+            tissues_of_interest = pd.read_csv(self.data_path+'tissues.csv')
+            tissues_of_interest = list(tissue_names.iloc[:, 1])
+
+        data = []
+        for tissue in tissues_of_interest:
+            file_path = os.path.join(self.data_path, "gene_read_counts_by_tissue/gene_reads_v10_"+tissue.lower()+".gct.gz")
+            print("\t - " + tissue)
+            try:
+                tmp = pd.read_csv(file_path, delimiter='\t', header=2, compression='infer')
+                tmp = tmp.loc[ tmp['Name'].isin(gene_code_ids_of_interest) ] # Name is Gene-ID, Description is Gene-Name
+                tmp['tissueSiteDetailId'] = tissue
+                data.extend(tmp.to_dict(orient='records'))
+                tmp = None
+                print("\t -- [OK]" )
+            except Exception as e:
+                print(f"Error reading {file_path}: {e}")
+
+        gene_expression_read_counts_by_tissue = pd.DataFrame(data)
+        data = None
+        gene_expression_read_counts_by_tissue.rename({'Description': 'geneSymbol'}, axis=1, inplace=True)
+        gene_expression_read_counts_by_tissue.drop("Name", axis='columns', inplace=True) # unused identifier
+        #gene_expression_read_counts_by_tissue.set_index(['geneSymbol', 'tissueSiteDetailId'], inplace=True) # Name is Gene-ID, Description is Gene-Name
+
+        return gene_expression_read_counts_by_tissue
+
 
     def retrieve_gene_expression_tpm_from_api(self, gene_code_ids_of_interest:list, tissues_of_interest:list=[], page_i=0) -> pd.DataFrame:
         
+        if self.verbose == True:
+            print("- Retrieving Gene Expression TPM by tissue (from API)...")
+
         api = "https://gtexportal.org/api/v2/expression/geneExpression"
-        #api = "https://gtexportal.org/api/v2/expression/medianGeneExpression"
         params = {'datasetId': self.DATASET_ID, 'itemsPerPage': self.LIMIT, 'page': page_i, 'gencodeId': gene_code_ids_of_interest, 'tissueSiteDetailId': tissues_of_interest, 'format':'json'}
         result =  requests.get( api, params ).json()
     

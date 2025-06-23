@@ -16,11 +16,11 @@ from .Reader import GTExDataReader
 from .inference import inferring_intralayer_edges, inferring_interlayer_edges
 
 class MultiDGene:
-    WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
+    data_path = None
     #
     GTExData = None
-    gene_expression_read_counts = None
-    gene_expression_tpm = None
+    gene_expression_read_counts_by_tissue = None
+    gene_expression_tpm_by_tissue = None
     gene_symbol_ids_of_interest = list()
     gene_code_ids_of_interest = list()
     #
@@ -30,11 +30,16 @@ class MultiDGene:
     verbose = False
     #
 
-    def __init__(self, genes_of_interest:list, tissues_of_interest:list=[], p_threshold:float=10e-8, verbose:bool=False):
+    def __init__(self, genes_of_interest:list, tissues_of_interest:list=[], p_threshold:float=10e-8, data_path:str=None, verbose:bool=False):
         self.verbose = verbose
         
         if len(genes_of_interest) == 0:
             raise Exception("Genes of interest ('genes_of_interest:list') are mandatory; this list cannot be empty or none.")
+
+        if data_path is None:
+            self.data_path = os.path.dirname(os.path.realpath(__file__)) + "/"
+        else:
+            self.data_path = data_path
 
         if self.verbose == True:
             print( "***************************************************************" )
@@ -56,27 +61,23 @@ class MultiDGene:
             print("[INFO] Initialization...")
 
         self.genes_of_interest = genes_of_interest
-        
+        self.tissues_of_interest = tissues_of_interest
+
         self.p_threshold = p_threshold
 
-        self.GTExData = GTExDataReader()
+        self.GTExData = GTExDataReader(data_path=self.data_path, verbose=self.verbose)
 
-        if self.verbose == True:
-            print("- Loading Metadata...")
+        # Metadata
         gene_symbol_ids_of_interest, gene_code_ids_of_interest = self.GTExData.load_metadata_from_file(genes_of_interest)
         self.gene_symbol_ids_of_interest = gene_symbol_ids_of_interest
         self.gene_code_ids_of_interest = gene_code_ids_of_interest
 
-        if self.verbose == True:
-            print("- Gene Expression Read Counts Loading...")
-        # self.gene_expression_read_counts = self.GTExData.load_gene_expression_read_counts_from_file()
-
-        if self.verbose == True:
-            print("- Retrieving Gene Expression TPM...")
-        gene_expression_tpm, tissues_of_interest = self.GTExData.retrieve_gene_expression_tpm_from_api(self.gene_code_ids_of_interest, tissues_of_interest)
-        self.gene_expression_tpm = gene_expression_tpm
-        self.tissues_of_interest = tissues_of_interest
-
+        # Gene Expression Read Counts by tissue
+        self.gene_expression_read_counts_by_tissue = self.GTExData.load_gene_expression_read_counts_from_file(gene_code_ids_of_interest=self.gene_code_ids_of_interest, tissues_of_interest=tissues_of_interest)
+        
+        # Gene Expression TPM by tissue
+        gene_expression_tpm_by_tissue, tissues_of_interest = self.GTExData.retrieve_gene_expression_tpm_from_api(gene_code_ids_of_interest=self.gene_code_ids_of_interest, tissues_of_interest=tissues_of_interest)
+        self.gene_expression_tpm_by_tissue = gene_expression_tpm_by_tissue
 
         print("[OK] ")
         print()
@@ -88,12 +89,12 @@ class MultiDGene:
             print("[INFO] Multi-Dimensional Network Construction...")
 
         multidimensional_network, edge_colors = inferring_intralayer_edges(gene_symbol_ids_of_interest=self.gene_symbol_ids_of_interest,
-                                                                            gene_expression_tpm_by_tissue=self.gene_expression_tpm,
+                                                                            gene_expression_tpm_by_tissue=self.gene_expression_tpm_by_tissue,
                                                                             tissues_of_interest=self.tissues_of_interest
                                                                             )
 
         multidimensional_network, edge_colors = inferring_interlayer_edges(gene_symbol_ids_of_interest=self.gene_symbol_ids_of_interest,
-                                                                            gene_read_counts_by_tissue=self.gene_expression_tpm,
+                                                                            gene_read_counts_by_tissue=self.gene_expression_read_counts_by_tissue,
                                                                             tissues_of_interest=self.tissues_of_interest,
                                                                             multidimensional_network=multidimensional_network,
                                                                             edge_colors=edge_colors
@@ -103,12 +104,12 @@ class MultiDGene:
         ###
         # Only for testing
         ###
-        with open(self.WORKSPACE+'statistics_result.csv', 'w', newline='') as file:
+        with open(self.data_path+'statistics_result.csv', 'w', newline='') as file:
             writer = csv.writer(file)
             field = ['gene1', 'gene2', 'tissue', 's', 'p', 'is_significative']
             writer.writerow(field)
         #   
-        with open(self.WORKSPACE+'statistics_result.csv', 'a', newline='') as file:
+        with open(self.data_path+'statistics_result.csv', 'a', newline='') as file:
             writer = csv.writer(file)
             # if p < self.p_threshold and (s > self.s_threshold[0] and s < self.s_threshold[1]):
             writer.writerow([u, v, current_tissue, s, p, ('yes' if p < self.p_threshold and (s > self.s_threshold[0] and s < self.s_threshold[1]) else 'no')])
