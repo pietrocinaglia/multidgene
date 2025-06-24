@@ -3,7 +3,9 @@
 import pymnet
 import pandas as pd
 import scipy
+import numpy as np
 from itertools import combinations
+import warnings
 
 ###
 # @project: multi-DGeNe
@@ -41,9 +43,9 @@ def inferring_intralayer_edges(gene_symbol_ids_of_interest:list, gene_expression
             u_gexp = u_data.data.values[0]
             v_gexp = v_data.data.values[0]
 
-            if ( len(u_gexp) < 3 or len(v_gexp) < 3):
-                if verbose == True:
-                    raise Warning("Size of sample less than 3; skipped.")
+            if len(u_gexp) < 3 or len(v_gexp) < 3:
+                #if verbose == True:
+                    #warnings.warn("Size of samples are empty or less than 3; skipped.")
                 continue
 
             s, p = scipy.stats.pearsonr(x=u_gexp, y=v_gexp, alternative='two-sided')
@@ -69,32 +71,30 @@ def inferring_interlayer_edges(gene_symbol_ids_of_interest:list, gene_read_count
         for l1, l2 in layer_pairs:
 
             u_v_data = gene_read_counts_by_tissue.loc[ (gene_read_counts_by_tissue['tissueSiteDetailId'].isin([l1,l2]) & (gene_read_counts_by_tissue['geneSymbol'] == gene)) ]
-            u_v_data = u_v_data.dropna(axis=1, how='all')
-            u_data = u_v_data.iloc[0, 1:].values
-            v_data = u_v_data.iloc[1, 1:].values
-            print(u_v_data)
-            print()
-            print(u_data)
-            print()
-            print(v_data)
+            u_v_data = u_v_data.drop("tissueSiteDetailId", axis='columns')
 
-            exit()
+            # Model expression data as array for each layer (l1,l2)
+            u_gexp = u_v_data.iloc[0, 1:].dropna().values.tolist()
+            v_gexp = u_v_data.iloc[1, 1:].dropna().values.tolist()
 
-            if (u_data.empty or v_data.empty):
-                continue
-                
-            u_gexp = u_data.data.values[0] #### Bisogna creare array di sample non Na per l1
-            v_gexp = v_data.data.values[0] #### Bisogna creare array di sample non Na per l2 (gli stessi)
-
-            if ( len(u_gexp) < 3 or len(v_gexp) < 3):
-                if verbose == True:
-                    raise Warning("Size of sample less than 3; skipped.")
+            if len(u_gexp) < 3 or len(v_gexp) < 3:
+                #if verbose == True:
+                    #warnings.warn("Size of samples are empty or less than 3; skipped.")
                 continue
 
-            s, p = scipy.stats.pearsonr(x=u_gexp, y=v_gexp, alternative='two-sided')
+            # Normality test
+            _, p_norm_u = scipy.stats.shapiro(u_gexp)
+            _, p_norm_v = scipy.stats.shapiro(v_gexp)
 
-            if p < p_threshold and (s > s_threshold[0] and s < s_threshold[1]):
+            if p_norm_u > 0.05 and p_norm_v > 0.05:
+                # u_gexp and v_gexp are normally distributed: Welch's t-test
+                _, p = scipy.stats.ttest_ind(u_gexp, v_gexp, equal_var=False)
+            else:
+                # otherwise: Mann–Whitney
+                _, p = scipy.stats.mannwhitneyu(u_gexp, v_gexp, alternative='two-sided')
+
+            if p < p_threshold:
                 multidimensional_network[gene,gene,l1,l2] = p_threshold
                 edge_colors[((gene, l1), (gene, l2))] = 'green'
-        
+
     return multidimensional_network, edge_colors

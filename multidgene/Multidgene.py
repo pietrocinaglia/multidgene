@@ -88,6 +88,8 @@ class MultiDGene:
         if self.verbose == True:
             print("[INFO] Multi-Dimensional Network Construction...")
 
+        multidimensional_network = pymnet.MultilayerNetwork(aspects=1, directed=False, fullyInterconnected=True)
+
         multidimensional_network, edge_colors = inferring_intralayer_edges(gene_symbol_ids_of_interest=self.gene_symbol_ids_of_interest,
                                                                             gene_expression_tpm_by_tissue=self.gene_expression_tpm_by_tissue,
                                                                             tissues_of_interest=self.tissues_of_interest
@@ -153,12 +155,15 @@ class MultiDGene:
 
         plt.show()
 
-    def save_as_files(self, multilayer_network:pymnet.MultilayerNetwork, output_path:str):
+    def save_as_files(self, multidimensional_network:pymnet.MultilayerNetwork, output_path:str):
         
         if output_path is None:
             raise Exception("You must provide an output path for storing data.")
         
-        filepath = output_path + "multilayer_network.txt"
+        filepath = output_path + "multidimensional_network.txt"
+        
+        # NOT IMPLEMENTED !
 
-        pymnet.write_edge_file(multilayer_network, filepath, sep='\t', weights=True, numericNodes=False)
-        print("- Multi-Dimensional Network saved as file [OK]")
+        # print("- Multi-Dimensional Network saved as file [OK]")
+
+        pass
