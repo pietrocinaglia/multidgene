@@ -25,12 +25,14 @@ class MultiDGene:
     gene_code_ids_of_interest = list()
     #
     tissues_of_interest = list()
-    p_threshold = 10e-8
+    mode = 'equal_exp' # mode:str can be defined as (1) 'equal_exp' (default) [edges refer to equal expressed genes between tissues (layers)], or (2) 'diff_exp' [edges refer to differential expressed genes between tissues (layers)]
+    ###
+    p_threshold = 0.05
     s_threshold = [0.5,0.9] # lower and upper limit
     verbose = False
     #
 
-    def __init__(self, genes_of_interest:list, tissues_of_interest:list=[], p_threshold:float=10e-8, data_path:str=None, verbose:bool=False):
+    def __init__(self, genes_of_interest:list, tissues_of_interest:list=[], p_threshold:float=0.05, data_path:str=None, mode:str = 'equal_exp', verbose:bool=False):
         self.verbose = verbose
         
         if len(genes_of_interest) == 0:
@@ -64,6 +66,7 @@ class MultiDGene:
         self.tissues_of_interest = tissues_of_interest
 
         self.p_threshold = p_threshold
+        self.mode = mode
 
         self.GTExData = GTExDataReader(data_path=self.data_path, verbose=self.verbose)
 
@@ -90,17 +93,25 @@ class MultiDGene:
 
         multidimensional_network = pymnet.MultilayerNetwork(aspects=1, directed=False, fullyInterconnected=True)
 
-        multidimensional_network, edge_colors = inferring_intralayer_edges(gene_symbol_ids_of_interest=self.gene_symbol_ids_of_interest,
-                                                                            gene_expression_tpm_by_tissue=self.gene_expression_tpm_by_tissue,
-                                                                            tissues_of_interest=self.tissues_of_interest
-                                                                            )
+        gene_exp_by_tissue = self.gene_expression_tpm_by_tissue
 
+        multidimensional_network, edge_colors = inferring_intralayer_edges(gene_symbol_ids_of_interest=self.gene_symbol_ids_of_interest,
+                                                                           gene_exp_by_tissue=self.gene_expression_tpm_by_tissue,
+                                                                           tissues_of_interest=self.tissues_of_interest
+                                                                           )
+
+
+        if self.mode == 'diff_exp' or self.mode == 'equal_exp':
+            gene_exp_by_tissue = self.gene_expression_read_counts_by_tissue
+            
         multidimensional_network, edge_colors = inferring_interlayer_edges(gene_symbol_ids_of_interest=self.gene_symbol_ids_of_interest,
-                                                                            gene_read_counts_by_tissue=self.gene_expression_read_counts_by_tissue,
-                                                                            tissues_of_interest=self.tissues_of_interest,
-                                                                            multidimensional_network=multidimensional_network,
-                                                                            edge_colors=edge_colors
-                                                                            )
+                                                                           gene_exp_by_tissue=gene_exp_by_tissue,
+                                                                           tissues_of_interest=self.tissues_of_interest,
+                                                                           mode=self.mode,
+                                                                           p_threshold=self.p_threshold,
+                                                                           multidimensional_network=multidimensional_network,
+                                                                           edge_colors=edge_colors
+                                                                           )
 
         '''
         ###

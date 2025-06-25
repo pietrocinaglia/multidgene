@@ -27,15 +27,15 @@ print("- Tissues: " + str(tissues_of_interest))
 print("################################################")
 print()
 
-multidgene = MultiDGene(genes_of_interest, tissues_of_interest, data_path=WORKSPACE+'data/', verbose=True)
+multidgene = MultiDGene(genes_of_interest, tissues_of_interest, data_path=WORKSPACE+'data/', p_threshold=0.05, mode='diff_co_exp', verbose=True)
 
 # Data processing
 multidimensional_network, edge_colors = multidgene.construct_multidimensional_network()
 
 # Plotting multidimensional_network, if output_path None the figure will not be saved as file.
-# multidgene.plot(multidimensional_network, edge_colors=edge_colors)
+multidgene.plot(multidimensional_network, edge_colors=edge_colors)
 
 # Storing multidimensional_network as set of edgelist, one per layer
-multidgene.save_as_files(multidimensional_network, output_path=WORKSPACE)
+# multidgene.save_as_files(multidimensional_network, output_path=WORKSPACE)
 
 print(">>> DONE <<<")
