@@ -6,7 +6,6 @@ import scipy
 import numpy as np
 from itertools import combinations
 from statsmodels.stats.multitest import multipletests
-import warnings
 
 ###
 # @project: multi-DGeNe
@@ -19,8 +18,41 @@ import warnings
 def fisher_z(r):
     return 0.5 * np.log((1 + r) / (1 - r))
 
-def inferring_intralayer_edges(gene_symbol_ids_of_interest:list, gene_exp_by_tissue:pd.DataFrame, tissues_of_interest, multidimensional_network:pymnet.MultilayerNetwork=None, p_threshold:float=10e-8, s_threshold:list=[0.5,0.9], edge_colors:set={}, verbose:bool=True) -> tuple[pymnet.MultilayerNetwork, set]:
+def __statistical_analysis(x, y, mode='exp'):
+    s = None
+    p = None
+    if mode == 'exp':
+        # Normality test
+        if scipy.stats.shapiro(x).pvalue > 0.05 and scipy.stats.shapiro(y).pvalue > 0.05:
+            # x and y are normally distributed: Welch's t-test
+            _, p = scipy.stats.ttest_ind(x, y, equal_var=False)
+        else:
+            # otherwise: Mann–Whitney
+            _, p = scipy.stats.mannwhitneyu(x, y, alternative='two-sided')
 
+    elif mode == 'co-exp':
+        s, p = scipy.stats.pearsonr(x=x, y=y, alternative='two-sided')
+
+    return s, p
+
+def _normalize_length(x, y):
+    if len(x) > len(y):
+        x = np.random.choice(x, size=len(y), replace=False)
+    elif len(y) > len(x):
+        y = np.random.choice(y, size=len(x), replace=False)
+    return x, y
+
+def inferring_intralayer_edges(
+    gene_symbol_ids_of_interest: list,
+    gene_exp_by_tissue: pd.DataFrame,
+    tissues_of_interest: list,
+    multidimensional_network: pymnet.MultilayerNetwork = None,
+    p_threshold: float = 1e-8,
+    s_threshold: list = [0.5, 0.9],
+    edge_colors: dict = {},
+    verbose: bool = True
+) -> tuple[pymnet.MultilayerNetwork, dict]:
+    
     if verbose == True:
         print("-> Inferring intra-layer edges...")
 
@@ -29,22 +61,20 @@ def inferring_intralayer_edges(gene_symbol_ids_of_interest:list, gene_exp_by_tis
 
     gene_pairs = list(combinations(gene_symbol_ids_of_interest, 2))
 
-    # Collecting all results for global correction
-    all_pvals = []
-    all_corrs = []
-    all_keys = []
+    # Collecting results for global correction
+    results = []
 
-    for current_layer in tissues_of_interest:
+    for tissue in tissues_of_interest:
 
-        multidimensional_network.add_layer(current_layer)
+        multidimensional_network.add_layer(tissue)
 
         if verbose == True:
-            print("-- Layer " + str(current_layer) + ") ...")
+            print("-- Layer " + str(tissue) + ") ...")
 
         for u, v in gene_pairs:
 
-            u_data = gene_exp_by_tissue.loc[ (gene_exp_by_tissue['geneSymbol'] == u) & (gene_exp_by_tissue['tissueSiteDetailId'] == current_layer) ]
-            v_data = gene_exp_by_tissue.loc[ (gene_exp_by_tissue['geneSymbol'] == v) & (gene_exp_by_tissue['tissueSiteDetailId'] == current_layer) ]
+            u_data = gene_exp_by_tissue.loc[ (gene_exp_by_tissue['geneSymbol'] == u) & (gene_exp_by_tissue['tissueSiteDetailId'] == tissue) ]
+            v_data = gene_exp_by_tissue.loc[ (gene_exp_by_tissue['geneSymbol'] == v) & (gene_exp_by_tissue['tissueSiteDetailId'] == tissue) ]
             
             if u_data.empty or v_data.empty:
                 continue
@@ -59,15 +89,17 @@ def inferring_intralayer_edges(gene_symbol_ids_of_interest:list, gene_exp_by_tis
 
             s, p = __statistical_analysis(u_gexp, v_gexp, mode='co-exp')
 
-            all_pvals.append(p)
-            all_corrs.append(s)
-            all_keys.append((u, v, current_layer))
+            results.append(((u, v, tissue), s, p))
 
+    if not results:
+        return multidimensional_network, edge_colors
+    
     # Apply global FDR correction
-    _, padj_all, _, _ = multipletests(all_pvals, method='fdr_bh')
+    keys, scores, pvals = zip(*results)
+    _, padj_all, _, _ = multipletests(pvals, method='fdr_bh')
 
     # Filter and add edges
-    for (u, v, current_layer), s, padj in zip(all_keys, all_corrs, padj_all):
+    for (u, v, current_layer), s, padj in zip(keys, scores, padj_all):
         if padj < p_threshold and (s_threshold[0] < s < s_threshold[1]):
             multidimensional_network[u, v, current_layer] = padj
             edge_colors[((u, current_layer), (v, current_layer))] = 'blue'
@@ -78,7 +110,17 @@ def inferring_intralayer_edges(gene_symbol_ids_of_interest:list, gene_exp_by_tis
     return multidimensional_network, edge_colors
 
 
-def inferring_interlayer_edges(gene_symbol_ids_of_interest:list, gene_exp_by_tissue:pd.DataFrame, tissues_of_interest, multidimensional_network:pymnet.MultilayerNetwork=None, p_threshold:float=10e-8, s_threshold:list=[0.5,0.9], mode:str="equal_exp", edge_colors:set={}, verbose:bool=True) -> tuple[pymnet.MultilayerNetwork, set]:
+def inferring_interlayer_edges(
+    gene_symbol_ids_of_interest: list,
+    gene_exp_by_tissue: pd.DataFrame,
+    tissues_of_interest: list,
+    multidimensional_network: pymnet.MultilayerNetwork = None,
+    p_threshold: float = 1e-8,
+    s_threshold: list = [0.5, 0.9],
+    mode: str = "equal_exp",
+    edge_colors: dict = {},
+    verbose: bool = True
+) -> tuple[pymnet.MultilayerNetwork, dict]:
     ###
     # mode:str can be defined as:
     # - 'equal_exp' (default) [edges refer to equal expressed genes between tissues (layers)]
@@ -92,10 +134,9 @@ def inferring_interlayer_edges(gene_symbol_ids_of_interest:list, gene_exp_by_tis
     gene_pairs = list(combinations(gene_symbol_ids_of_interest, 2))
     layer_pairs = list(combinations(tissues_of_interest, 2))
 
-    all_pvals = []
-    gene_pair_keys = []
+    results = []
 
-    if mode == 'equal_exp' or mode == 'diff_exp':
+    if mode in ['equal_exp', 'diff_exp']:
         for gene in gene_symbol_ids_of_interest:
             for l1, l2 in layer_pairs:
                 l1_l2_data = gene_exp_by_tissue.loc[ (gene_exp_by_tissue['tissueSiteDetailId'].isin([l1,l2]) & (gene_exp_by_tissue['geneSymbol'] == gene)) ]
@@ -111,17 +152,17 @@ def inferring_interlayer_edges(gene_symbol_ids_of_interest:list, gene_exp_by_tis
                     continue
 
                 _, p = __statistical_analysis(expr_l1, expr_l2, mode='exp')
+                results.append(((gene, l1, l2), None, p))
 
-                all_pvals.append(p)
-                gene_pair_keys.append((gene, l1, l2))
+        if not results:
+            return multidimensional_network, edge_colors
+        
+        keys, _, pvals = zip(*results)
+        _, padj_all, _, _ = multipletests(pvals, method='fdr_bh')
 
         # Applying global multiple testing correction
-        _, padj_all, _, _ = multipletests(all_pvals, method='fdr_bh')
-        for (gene, l1, l2), adj_p in zip(gene_pair_keys, padj_all):
-            if mode == 'equal_exp' and adj_p > p_threshold:
-                multidimensional_network[gene, gene, l1, l2] = adj_p
-                edge_colors[((gene, l1), (gene, l2))] = 'green'
-            elif mode == 'diff_exp' and adj_p < p_threshold:
+        for (gene, l1, l2), adj_p in zip(keys, padj_all):
+            if (mode == 'equal_exp' and adj_p > p_threshold) or (mode == 'diff_exp' and adj_p < p_threshold):
                 multidimensional_network[gene, gene, l1, l2] = adj_p
                 edge_colors[((gene, l1), (gene, l2))] = 'green'
     
@@ -135,35 +176,23 @@ def inferring_interlayer_edges(gene_symbol_ids_of_interest:list, gene_exp_by_tis
                 u_data_l2 = gene_exp_by_tissue.loc[ (gene_exp_by_tissue['geneSymbol'] == u) & (gene_exp_by_tissue['tissueSiteDetailId'] == l2) ]
                 v_data_l2 = gene_exp_by_tissue.loc[ (gene_exp_by_tissue['geneSymbol'] == v) & (gene_exp_by_tissue['tissueSiteDetailId'] == l2) ]
                 
-                u_gexp_l1 = u_data_l1.data.values[0]
-                v_gexp_l1 = v_data_l1.data.values[0]
+                if u_data_l1.empty or v_data_l1.empty or u_data_l2.empty or v_data_l2.empty:
+                    continue
 
-                u_gexp_l2 = u_data_l2.data.values[0]
-                v_gexp_l2 = v_data_l2.data.values[0]
+                u_gexp_l1, v_gexp_l1 = u_data_l1.data.values[0], v_data_l1.data.values[0]
+                u_gexp_l2, v_gexp_l2 = u_data_l2.data.values[0], v_data_l2.data.values[0]
                 
-                # Normalize size between gene expression values --start
-                # l1
-                if len(u_gexp_l1) > len(u_gexp_l1):
-                    idx = np.random.choice(len(u_gexp_l1), len(v_gexp_l1), replace=False)
-                    u_gexp_l1 = u_gexp_l1[idx]
-                elif len(u_gexp_l1) < len(v_gexp_l1):
-                    idx = np.random.choice(len(v_gexp_l1), len(u_gexp_l1), replace=False)
-                    v_gexp_l1 = v_gexp_l1[idx]
-                # l2
-                if len(u_gexp_l2) > len(v_gexp_l2):
-                    idx = np.random.choice(len(u_gexp_l2), len(v_gexp_l2), replace=False)
-                    u_gexp_l2 = u_gexp_l2[idx]
-                elif len(u_gexp_l2) < len(v_gexp_l2):
-                    idx = np.random.choice(len(v_gexp_l2), len(u_gexp_l2), replace=False)
-                    v_gexp_l2 = v_gexp_l2[idx]
-                # Normalize size between gene expression values --end
+                if len(u_gexp_l1) < 3 or len(v_gexp_l1) < 3 or len(u_gexp_l2) < 3 or len(v_gexp_l2) < 3:
+                    continue
 
-                s1, _ = __statistical_analysis(u_gexp_l1, v_gexp_l1, mode='co-exp')
-                s2, _ = __statistical_analysis(u_gexp_l2, v_gexp_l2, mode='co-exp')
+                x1, y1 = _normalize_length(u_gexp_l1, v_gexp_l1)
+                x2, y2 = _normalize_length(u_gexp_l2, v_gexp_l2)
+
+                s1, _ = __statistical_analysis(x1, y1, mode='co-exp')
+                s2, _ = __statistical_analysis(x2, y2, mode='co-exp')
 
                 # Transform
-                z1 = fisher_z(s1)
-                z2 = fisher_z(s2)
+                z1, z2 = fisher_z(s1), fisher_z(s2)
 
                 # Number of samples per tissue
                 n1 = len(u_gexp_l1)
@@ -178,36 +207,17 @@ def inferring_interlayer_edges(gene_symbol_ids_of_interest:list, gene_exp_by_tis
                 # p-value
                 p = 2 * (1 - scipy.stats.norm.cdf(abs(z_diff)))
 
-                all_pvals.append(p)
-                gene_pair_keys.append((u, v, l1, l2))
+                results.append(((u, v, l1, l2), None, p))
 
+        if not results:
+            return multidimensional_network, edge_colors
+        
         # Applying global multiple testing correction
-        _, padj_all, _, _ = multipletests(all_pvals, method='fdr_bh')
-        for (u, v, l1, l2), adj_p in zip(gene_pair_keys, padj_all):
+        keys, _, pvals = zip(*results)
+        _, padj_all, _, _ = multipletests(pvals, method='fdr_bh')
+
+        for (u, v, l1, l2), adj_p in zip(keys, padj_all):
             multidimensional_network[u, v, l1, l2] = adj_p
             edge_colors[((u, l1), (v, l2))] = 'green'
     
     return multidimensional_network, edge_colors
-
-##
-# A gene is differential expressed between two tissues (layer) of interest
-##
-def __statistical_analysis(x, y, mode='exp'):
-    s = None
-    p = None
-    if mode == 'exp':
-        # Normality test
-        _, p_norm_u = scipy.stats.shapiro(x)
-        _, p_norm_v = scipy.stats.shapiro(y)
-
-        if p_norm_u > 0.05 and p_norm_v > 0.05:
-            # x and y are normally distributed: Welch's t-test
-            _, p = scipy.stats.ttest_ind(x, y, equal_var=False)
-        else:
-            # otherwise: Mann–Whitney
-            _, p = scipy.stats.mannwhitneyu(x, y, alternative='two-sided')
-
-    elif mode == 'co-exp':
-        s, p = scipy.stats.pearsonr(x=x, y=y, alternative='two-sided')
-
-    return s, p
