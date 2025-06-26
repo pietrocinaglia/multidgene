@@ -1,7 +1,6 @@
 # Multi-Dimensional Gene Network (multi-DGeNe)
 
-**multi-DGeNe** is a tool for inferring Multi-Dimensional Gene Network (multi-DGeNe) inference based on Weighted Gene Co-expression Network Analysis (WGCNA) across human tissues.
-
+**multi-DGeNe** is a tool for inferring Multi-Dimensional Gene Network (multi-DGeNe) inference based on Co-Expression and Expression Dynamics Across Tissues.
 
 ## Additional Information
 
@@ -38,20 +37,25 @@ from multidgene import MultiDGene
 3. Create an instance of **multi-DGeNe**:
 
 ```
-multidgene = MultiDGene(genes_of_interest:list, tissues_of_interest:list=[], threshold:float=0.05, verbose:bool=False):
+multidgene = MultiDGene(genes_of_interest: list, tissues_of_interest: list = [], p_threshold: float = 0.05, data_path: str = None, mode: str = 'equal_exp', verbose: bool = False)
 ```
+
+'mode: str' concerns the method applied for infering interlayer edges, and it can be defined as:
+- 'equal_exp' (default): interlayer edges refer to equal expressed genes between tissues (layers)
+- 'diff_exp': interlayer edges refer to differential expressed genes between tissues (layers)
+- 'diff_co_exp': interlayer edges refer to differential co-expressed pairs of genes between tissues (layers)
+
 
 4. Use the following methods:
 
-- construct_multidimensional_network() -> tuple[pymnet.MultilayerNetwork, set]
-- plot(multilayer_network:pymnet.MultilayerNetwork, edgeColors:set={}, output_path:str=None)
-- save_as_files(multilayer_network:pymnet.MultilayerNetwork, output_path:str):
+- construct_multidimensional_network(self) -> tuple[pymnet.MultilayerNetwork, set]:
+- plot(self, multidimensional_network: pymnet.MultilayerNetwork, edge_colors: set = {}, output_path: str = None):
+- save_as_files(self, multidimensional_network: pymnet.MultilayerNetwork, output_path: str):
 
 
 ## Usage <a name="usage"></a>
 
 See **test.py** for illustrative purpose, it implements our solution for a real-world use case.
-
 
 
 ### License
