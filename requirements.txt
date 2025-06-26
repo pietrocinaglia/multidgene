@@ -1,7 +1,0 @@
-matplotlib==3.8.3
-numpy==2.3.1
-pandas==2.3.0
-pymnet==1.0.0
-Requests==2.32.4
-scipy==1.16.0
-statsmodels==0.14.4
