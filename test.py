@@ -19,8 +19,8 @@ WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 genes_of_interest = ['BRCA1','MZT2B','TP53','DDB2','USP24','ANAPC15','PSMD14','COP1']
 tissues_of_interest = ['Brain_Cortex','Brain_Hippocampus','Liver','Thyroid']#,'Stomach','Liver']
-
 mode = 'diff_exp'
+
 ###
 # mode:str can be defined as:
 # - 'equal_exp' (default) [edges refer to equal expressed genes between tissues (layers)]
@@ -43,6 +43,8 @@ multidimensional_network, edge_colors = multidgene.construct_multidimensional_ne
 
 # Plotting multidimensional_network
 multidimensional_network.plot()
+
+multidimensional_network.write_edge_list(WORKSPACE+"test.txt", data=True)
 
 # Plotting multidimensional_network, if output_path None the figure will not be saved as file.
 # multidgene.plot(multidimensional_network, edge_colors=edge_colors)
