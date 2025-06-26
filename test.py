@@ -20,6 +20,14 @@ WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
 genes_of_interest = ['BRCA1','MZT2B','TP53','DDB2','USP24','ANAPC15','PSMD14','COP1']
 tissues_of_interest = ['Brain_Cortex','Brain_Hippocampus','Liver','Thyroid']#,'Stomach','Liver']
 
+mode = 'diff_exp'
+###
+# mode:str can be defined as:
+# - 'equal_exp' (default) [edges refer to equal expressed genes between tissues (layers)]
+# - 'diff_exp' [edges refer to differential expressed genes between tissues (layers)]
+# - 'diff_co_exp' [edges refer to differential co-expressed pairs of genes between tissues (layers)]
+### 
+
 print("################################################")
 print("> TESTING <")
 print("- Genes: " + str(genes_of_interest))
@@ -27,7 +35,7 @@ print("- Tissues: " + str(tissues_of_interest))
 print("################################################")
 print()
 
-multidgene = MultiDGene(genes_of_interest, tissues_of_interest, data_path=WORKSPACE+'data/', p_threshold=0.05, mode='equal_exp', verbose=True)
+multidgene = MultiDGene(genes_of_interest, tissues_of_interest, data_path=WORKSPACE+'data/', p_threshold=0.05, mode=mode, verbose=True)
 
 # Data processing
 multidimensional_network, edge_colors = multidgene.construct_multidimensional_network()
