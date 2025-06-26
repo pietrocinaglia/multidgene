@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import pymnet
 import pandas as pd
 import scipy
 import numpy as np
@@ -11,9 +10,12 @@ from statsmodels.stats.multitest import multipletests
 # @project: multi-DGeNe
 # @author: Pietro Cinaglia
 # @mail: cinaglia@unicz.it
-# @description: Multi-Dimensional Gene Network (multi-DGeNe) inference based on Weighted Gene Co-expression Network Analysis (WGCNA) across human tissues.
+# @description: Multi-Dimensional Gene Network (multi-DGeNe) inference, bridging Co-Expression and Expression Dynamics across tissues.
 # @url: https://github.com/pietrocinaglia/multidgene
 ###
+
+# Own modules
+from .MultiDNetwork import MultiDNetwork
 
 def fisher_z(r):
     return 0.5 * np.log((1 + r) / (1 - r))
@@ -46,18 +48,19 @@ def inferring_intralayer_edges(
     gene_symbol_ids_of_interest: list,
     gene_exp_by_tissue: pd.DataFrame,
     tissues_of_interest: list,
-    multidimensional_network: pymnet.MultilayerNetwork = None,
+    multidimensional_network: MultiDNetwork = None,#pymnet.MultilayerNetwork = None,
     p_threshold: float = 1e-8,
     s_threshold: list = [0.5, 0.9],
     edge_colors: dict = {},
-    verbose: bool = True
-) -> tuple[pymnet.MultilayerNetwork, dict]:
+    verbose: bool = False
+) -> tuple[MultiDNetwork, dict]:
     
-    if verbose == True:
+    if verbose:
         print("-> Inferring intra-layer edges...")
 
     if multidimensional_network is None:
-        multidimensional_network = pymnet.MultilayerNetwork(aspects=1, directed=False, fullyInterconnected=True)
+        multidimensional_network = MultiDNetwork()#pymnet.MultilayerNetwork(aspects=1, directed=False, fullyInterconnected=True)
+        multidimensional_network.add_nodes(gene_symbol_ids_of_interest) #add to all layers
 
     gene_pairs = list(combinations(gene_symbol_ids_of_interest, 2))
 
@@ -68,7 +71,7 @@ def inferring_intralayer_edges(
 
         multidimensional_network.add_layer(tissue)
 
-        if verbose == True:
+        if verbose:
             print("-- Layer " + str(tissue) + ") ...")
 
         for u, v in gene_pairs:
@@ -83,7 +86,7 @@ def inferring_intralayer_edges(
             v_gexp = v_data.data.values[0]
 
             if len(u_gexp) < 3 or len(v_gexp) < 3:
-                #if verbose == True:
+                #if verbose:
                     #warnings.warn("Size of samples are empty or less than 3; skipped.")
                 continue
 
@@ -101,10 +104,11 @@ def inferring_intralayer_edges(
     # Filter and add edges
     for (u, v, current_layer), s, padj in zip(keys, scores, padj_all):
         if padj < p_threshold and (s_threshold[0] < s < s_threshold[1]):
-            multidimensional_network[u, v, current_layer] = padj
-            edge_colors[((u, current_layer), (v, current_layer))] = 'blue'
+            multidimensional_network.add_edge(u,v,current_layer,weight=padj)
+            #multidimensional_network[u, v, current_layer] = padj
+            #edge_colors[((u, current_layer), (v, current_layer))] = 'blue'
 
-    if verbose == True:
+    if verbose:
         print("- [OK]")
 
     return multidimensional_network, edge_colors
@@ -114,13 +118,13 @@ def inferring_interlayer_edges(
     gene_symbol_ids_of_interest: list,
     gene_exp_by_tissue: pd.DataFrame,
     tissues_of_interest: list,
-    multidimensional_network: pymnet.MultilayerNetwork = None,
+    multidimensional_network: MultiDNetwork,#pymnet.MultilayerNetwork = None,
     p_threshold: float = 1e-8,
     s_threshold: list = [0.5, 0.9],
     mode: str = "equal_exp",
     edge_colors: dict = {},
     verbose: bool = True
-) -> tuple[pymnet.MultilayerNetwork, dict]:
+) -> tuple[MultiDNetwork, dict]:
     ###
     # mode:str can be defined as:
     # - 'equal_exp' (default) [edges refer to equal expressed genes between tissues (layers)]
@@ -128,7 +132,7 @@ def inferring_interlayer_edges(
     # - 'diff_co_exp' [edges refer to differential co-expressed pairs of genes between tissues (layers)]
     ###
 
-    if verbose == True:
+    if verbose:
         print("-> Inferring inter-layer edges...")
     
     gene_pairs = list(combinations(gene_symbol_ids_of_interest, 2))
@@ -147,7 +151,7 @@ def inferring_interlayer_edges(
                 expr_l2 = l1_l2_data.iloc[1, 1:].dropna().values.tolist()
 
                 if len(expr_l1) < 3 or len(expr_l2) < 3:
-                    #if verbose == True:
+                    #if verbose:
                         #warnings.warn("Size of samples are empty or less than 3; skipped.")
                     continue
 
@@ -163,8 +167,9 @@ def inferring_interlayer_edges(
         # Applying global multiple testing correction
         for (gene, l1, l2), adj_p in zip(keys, padj_all):
             if (mode == 'equal_exp' and adj_p > p_threshold) or (mode == 'diff_exp' and adj_p < p_threshold):
-                multidimensional_network[gene, gene, l1, l2] = adj_p
-                edge_colors[((gene, l1), (gene, l2))] = 'green'
+                multidimensional_network.add_edge(gene,gene,l1,l2,weight=adj_p)
+                #multidimensional_network[gene, gene, l1, l2] = adj_p
+                #edge_colors[((gene, l1), (gene, l2))] = 'green'
     
     # differential co-expression
     elif mode == 'diff_co_exp':
@@ -217,7 +222,8 @@ def inferring_interlayer_edges(
         _, padj_all, _, _ = multipletests(pvals, method='fdr_bh')
 
         for (u, v, l1, l2), adj_p in zip(keys, padj_all):
-            multidimensional_network[u, v, l1, l2] = adj_p
-            edge_colors[((u, l1), (v, l2))] = 'green'
+            multidimensional_network.add_edge(u,v,l1,l2,weight=adj_p)
+            #multidimensional_network[u, v, l1, l2] = adj_p
+            #edge_colors[((u, l1), (v, l2))] = 'green'
     
     return multidimensional_network, edge_colors

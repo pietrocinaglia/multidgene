@@ -1,12 +1,19 @@
 # -*- coding: utf-8 -*-
-import os
-import pymnet
-import matplotlib.pyplot as plt
 
-# own modules
+import os
+
+###
+# @project: multi-DGeNe
+# @author: Pietro Cinaglia
+# @mail: cinaglia@unicz.it
+# @description: Multi-Dimensional Gene Network (multi-DGeNe) inference, bridging Co-Expression and Expression Dynamics across tissues.
+# @url: https://github.com/pietrocinaglia/multidgene
+###
+
+# Own modules
+from .MultiDNetwork import MultiDNetwork
 from .Reader import Reader
 from .inference import inferring_intralayer_edges, inferring_interlayer_edges
-
 
 class MultiDGene:
     def __init__(
@@ -34,15 +41,15 @@ class MultiDGene:
         self.tissues_of_interest = tissues_of_interest
         self.p_threshold = p_threshold
         self.mode = mode
+        # Default
         self.s_threshold = [0.5, 0.9]
 
-        self._print_banner()
-        self._initialize_data()
+        if self.verbose:
+            self._show_banner()
 
-    def _print_banner(self):
-        if not self.verbose:
-            return
+        self._initialization()
 
+    def _show_banner(self):
         banner = """
 ***************************************************************
  --------------------------------------------------------------
@@ -59,9 +66,11 @@ class MultiDGene:
 ***************************************************************
 """
         print(banner)
-        print("[INFO] Initialization...")
 
-    def _initialize_data(self):
+    def _initialization(self):
+        if self.verbose:
+            print("[INFO] Initialization...")
+
         self.GTExData = Reader(data_path=self.data_path, verbose=self.verbose)
 
         self.gene_symbol_ids_of_interest, self.gene_code_ids_of_interest = self.GTExData.load_metadata_from_file(
@@ -81,35 +90,38 @@ class MultiDGene:
         if self.verbose:
             print("[OK]\n")
 
-    def construct_multidimensional_network(self) -> tuple[pymnet.MultilayerNetwork, set]:
+    def construct_multidimensional_network(self) -> tuple[MultiDNetwork, set]:
         if self.verbose:
             print("[INFO] Constructing Multi-Dimensional Network...")
 
-        net = pymnet.MultilayerNetwork(aspects=1, directed=False, fullyInterconnected=True)
+        multidimensional_network = MultiDNetwork()#pymnet.MultilayerNetwork(aspects=1, directed=False, fullyInterconnected=True)
 
-        net, edge_colors = inferring_intralayer_edges(
+        multidimensional_network, edge_colors = inferring_intralayer_edges(
             gene_symbol_ids_of_interest=self.gene_symbol_ids_of_interest,
             gene_exp_by_tissue=self.gene_expression_tpm_by_tissue,
-            tissues_of_interest=self.tissues_of_interest
+            tissues_of_interest=self.tissues_of_interest,
+            verbose=self.verbose
         )
 
         interlayer_input = self.gene_expression_read_counts_by_tissue if self.mode in ['diff_exp', 'equal_exp'] else self.gene_expression_tpm_by_tissue
 
-        net, edge_colors = inferring_interlayer_edges(
+        multidimensional_network, edge_colors = inferring_interlayer_edges(
             gene_symbol_ids_of_interest=self.gene_symbol_ids_of_interest,
             gene_exp_by_tissue=interlayer_input,
             tissues_of_interest=self.tissues_of_interest,
             mode=self.mode,
             p_threshold=self.p_threshold,
-            multidimensional_network=net,
-            edge_colors=edge_colors
+            multidimensional_network=multidimensional_network,
+            edge_colors=edge_colors,
+            verbose=self.verbose
         )
 
         if self.verbose:
             print("\n[INFO] Multi-Dimensional Network Successfully Modelled\n")
 
-        return net, edge_colors
+        return multidimensional_network, edge_colors
 
+    '''
     def plot(self, multidimensional_network: pymnet.MultilayerNetwork, edge_colors: set = {}, output_path: str = None):
         fig = pymnet.draw(
             multidimensional_network,
@@ -144,3 +156,4 @@ class MultiDGene:
 
         # Placeholder for future implementation
         print(f"[WARNING] Saving to file is not implemented yet. Expected path: {filepath}")
+    '''

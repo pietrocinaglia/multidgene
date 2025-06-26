@@ -1,8 +1,16 @@
 # -*- coding: utf-8 -*-
+
 import os
 import pandas as pd
 import requests
 
+###
+# @project: multi-DGeNe
+# @author: Pietro Cinaglia
+# @mail: cinaglia@unicz.it
+# @description: Multi-Dimensional Gene Network (multi-DGeNe) inference, bridging Co-Expression and Expression Dynamics across tissues.
+# @url: https://github.com/pietrocinaglia/multidgene
+###
 
 class Reader:
     DATASET_ID = 'gtex_v10'

@@ -2,7 +2,7 @@
 
 import os
 
-from multidgene import MultiDGene
+from app.multidgene import MultiDGene
 
 ###
 #
@@ -11,7 +11,7 @@ from multidgene import MultiDGene
 # @project: multi-DGeNe
 # @author: Pietro Cinaglia
 # @mail: cinaglia@unicz.it
-# @description: Multi-Dimensional Gene Network (multi-DGeNe) inference based on Weighted Gene Co-expression Network Analysis (WGCNA) across human tissues.
+# @description: Multi-Dimensional Gene Network (multi-DGeNe) inference, bridging Co-Expression and Expression Dynamics across tissues.
 # @url: https://github.com/pietrocinaglia/multidgene
 ###
 
@@ -32,6 +32,7 @@ print("################################################")
 print("> TESTING <")
 print("- Genes: " + str(genes_of_interest))
 print("- Tissues: " + str(tissues_of_interest))
+print("- Mode: " + str(mode))
 print("################################################")
 print()
 
@@ -40,8 +41,11 @@ multidgene = MultiDGene(genes_of_interest, tissues_of_interest, data_path=WORKSP
 # Data processing
 multidimensional_network, edge_colors = multidgene.construct_multidimensional_network()
 
+# Plotting multidimensional_network
+multidimensional_network.plot()
+
 # Plotting multidimensional_network, if output_path None the figure will not be saved as file.
-multidgene.plot(multidimensional_network, edge_colors=edge_colors)
+# multidgene.plot(multidimensional_network, edge_colors=edge_colors)
 
 # Storing multidimensional_network as set of edgelist, one per layer
 # multidgene.save_as_files(multidimensional_network, output_path=WORKSPACE)
