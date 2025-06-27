@@ -5,7 +5,7 @@ import os
 import json
 
 # Own modules
-from multidgene import MultiDGene
+from multidgene import MultiDGeNe
 from multidgene import MultiDNetwork
 
 WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
@@ -34,7 +34,7 @@ async def construct_multidimensional_network(request: Request):
     mode = data.get("mode", "equal_exp")
 
     # Run your core function, get NetworkX or edge list
-    multidgene = MultiDGene(genes_of_interest=genes, tissues_of_interest=tissues, mode=mode, p_threshold=0.05, data_path=WORKSPACE+'../data/')
+    multidgene = MultiDGeNe(genes_of_interest=genes, tissues_of_interest=tissues, mode=mode, p_threshold=0.05, data_path=WORKSPACE+'../data/')
     multidimensional_network, _ = multidgene.construct_multidimensional_network()
 
     edge_list = multidimensional_network.get_edges()

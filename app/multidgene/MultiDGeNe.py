@@ -15,7 +15,7 @@ from .MultiDNetwork import MultiDNetwork
 from .Reader import Reader
 from .inference import inferring_intralayer_edges, inferring_interlayer_edges
 
-class MultiDGene:
+class MultiDGeNe:
     def __init__(
         self,
         genes_of_interest: list,
@@ -94,12 +94,15 @@ class MultiDGene:
         if self.verbose:
             print("[INFO] Constructing Multi-Dimensional Network...")
 
-        multidimensional_network = MultiDNetwork()#pymnet.MultilayerNetwork(aspects=1, directed=False, fullyInterconnected=True)
+        multidimensional_network = MultiDNetwork()
+        multidimensional_network.add_layers(self.tissues_of_interest) #add to all layers
+        multidimensional_network.add_nodes(self.gene_symbol_ids_of_interest) #add to all layers
 
         multidimensional_network, edge_colors = inferring_intralayer_edges(
             gene_symbol_ids_of_interest=self.gene_symbol_ids_of_interest,
             gene_exp_by_tissue=self.gene_expression_tpm_by_tissue,
             tissues_of_interest=self.tissues_of_interest,
+            multidimensional_network=multidimensional_network,
             verbose=self.verbose
         )
 
@@ -120,40 +123,4 @@ class MultiDGene:
             print("\n[INFO] Multi-Dimensional Network Successfully Modelled\n")
 
         return multidimensional_network, edge_colors
-
-    '''
-    def plot(self, multidimensional_network: pymnet.MultilayerNetwork, edge_colors: set = {}, output_path: str = None):
-        fig = pymnet.draw(
-            multidimensional_network,
-            layershape='rectangle',
-            layerPadding=0.2,
-            defaultLayerColor="#BDBBBB",
-            defaultLayerLabelLoc=(1.1, 1.1),
-            defaultLayerLabelColor="#6E6E6E",
-            defaultNodeLabelColor="#000000",
-            defaultNodeColor="#000000",
-            nodeSizeRule={'rule': 'scaled', 'scalecoeff': 0.2},
-            defaultEdgeColor='black',
-            edgeColorDict=edge_colors,
-            defaultNodeLabelSize=6,
-            alignedNodes=True,
-            figsize=(7, 4),
-            autoscale=True,
-        )
-
-        if output_path:
-            filepath = os.path.join(output_path, "multidimensional_network.pdf")
-            fig.savefig(filepath)
-            print(f"- Plot saved as file [OK] -> {filepath}")
-
-        plt.show()
-
-    def save_as_files(self, multidimensional_network: pymnet.MultilayerNetwork, output_path: str):
-        if not output_path:
-            raise ValueError("You must provide an output path for storing data.")
-
-        filepath = os.path.join(output_path, "multidimensional_network.txt")
-
-        # Placeholder for future implementation
-        print(f"[WARNING] Saving to file is not implemented yet. Expected path: {filepath}")
-    '''
+    

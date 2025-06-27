@@ -2,7 +2,8 @@
 
 import os
 
-from app.multidgene import MultiDGene
+# Own modules
+from app.multidgene import MultiDGeNe
 
 ###
 #
@@ -36,20 +37,17 @@ print("- Mode: " + str(mode))
 print("################################################")
 print()
 
-multidgene = MultiDGene(genes_of_interest, tissues_of_interest, data_path=WORKSPACE+'data/', p_threshold=0.05, mode=mode, verbose=True)
+multidgene = MultiDGeNe(genes_of_interest, tissues_of_interest, data_path=WORKSPACE+'data/', p_threshold=0.05, mode=mode, verbose=True)
 
 # Data processing
 multidimensional_network, edge_colors = multidgene.construct_multidimensional_network()
 
 # Plotting multidimensional_network
 multidimensional_network.plot()
-
-multidimensional_network.write_edge_list(WORKSPACE+"test.txt", data=True)
-
-# Plotting multidimensional_network, if output_path None the figure will not be saved as file.
-# multidgene.plot(multidimensional_network, edge_colors=edge_colors)
+# multidimensional_network.plot(output_path=WORKSPACE+'multidimensional_network', format='eps')
+# multidimensional_network.plot(output_path=WORKSPACE+'multidimensional_network', format='png', dpi=500)
 
 # Storing multidimensional_network as set of edgelist, one per layer
-# multidgene.save_as_files(multidimensional_network, output_path=WORKSPACE)
+# multidimensional_network.write_edge_list(output_path=WORKSPACE+'multidimensional_network.txt', data=True)
 
 print(">>> DONE <<<")

@@ -6,6 +6,8 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.patches as patches
+import matplotlib.lines as mlines
+import warnings
 
 ###
 # @project: multi-DGeNe
@@ -16,18 +18,31 @@ import matplotlib.patches as patches
 ###
 
 class MultiDNetwork:
+    layers = {}
+
     def __init__(self):
         self.layers = set()
         self.graph = nx.MultiDiGraph()
 
-    def add_layer(self, id: str):
-        self.layers.add(id)
+    def add_layer(self, layer_id: str):
+        self.layers.add(layer_id)
+    
+    def add_layers(self, layer_ids: list):
+        self.layers.update(layer_ids)
 
-    def add_node(self, id: str, layer_id: str):
+    def add_node(self, node_id: str, layer_id: str):
+        if layer_id is None and self.layers is None:
+            warnings.warn("You can not add nodes without define layers!")
+            return
+        
         self.add_layer(layer_id)
-        self.graph.add_node((id, layer_id))
+        self.graph.add_node((node_id, layer_id))
 
     def add_nodes(self, nodes: set, layer_id: str = None):
+        if layer_id is None and self.layers is None:
+            warnings.warn("You can not add nodes without define layers!")
+            return
+
         if layer_id is None:
             for layer in self.layers:
                 for node in nodes:
@@ -36,21 +51,30 @@ class MultiDNetwork:
             for node in nodes:
                 self.add_node(node, layer_id)
 
-    def add_edge(self, node1_id: str, node2_id: str, layer1: str = None, layer2: str = None, weight: int = 1):
+    def add_edge(self, node1_id: str, node2_id: str, layer1: str = None, layer2: str = None, weight: int = 1) -> bool:
         if layer2 is None:
             layer2 = layer1
-        self.add_node(node1_id, layer1)
-        self.add_node(node2_id, layer2)
+        
+        if (not self.has_node(node1_id,layer1)) or (not self.has_node(node2_id,layer2)):
+            return False
+        
         self.graph.add_edge((node1_id, layer1), (node2_id, layer2), weight=weight)
+        return True
 
-    def get_nodes(self, layer_id: str = None):
+    def has_node(self, node_id:str, layer_id: str = None) -> bool:
+        for (node, layer) in self.graph.nodes:
+            if node_id == node and (layer_id is None or layer_id == layer):
+                return True
+        return False
+    
+    def get_nodes(self, layer_id: str = None) -> dict:
         result = defaultdict(set)
         for (node, layer) in self.graph.nodes:
             if layer_id is None or layer_id == layer:
                 result[layer].add(node)
         return dict(result)
 
-    def get_edges(self, layer_id: str = None):
+    def get_edges(self, layer_id: str = None) -> list:
         edges = []
         for (u, v, data) in self.graph.edges(data=True):
             (n1, l1) = u
@@ -63,7 +87,7 @@ class MultiDNetwork:
                 continue
         return edges
 
-    def get_layers(self):
+    def get_layers(self) -> list:
         return list(self.layers)
 
     def write_edge_list(self, output_path, data: bool = False):
@@ -106,7 +130,7 @@ class MultiDNetwork:
         G_layer = self.graph.subgraph(nodes).to_directed()
         return nx.adjacency_matrix(G_layer, nodelist=nodes)
     
-    def plot(self):
+    def plot(self, output_path:str=None, format='eps', dpi='figure'):
         pos = {}
         layer_positions = {}
         color_map = list(mcolors.TABLEAU_COLORS.values())
@@ -130,27 +154,76 @@ class MultiDNetwork:
             if x_vals and y_vals:
                 min_x, max_x = min(x_vals), max(x_vals)
                 min_y, max_y = min(y_vals), max(y_vals)
-                width = max_x - min_x + 1
-                height = max_y - min_y + 1
+                width = (max_x - min_x + 1) + 0.0
+                height = (max_y - min_y + 1) + 1.0
                 ellipse = patches.Ellipse(((min_x + max_x) / 2, (min_y + max_y) / 2), width, height,
-                                          color=layer_positions[layer], alpha=0.2)
+                                        color=layer_positions[layer], alpha=0.2)
                 ax.add_patch(ellipse)
+                ax.text((min_x + max_x) / 2, max_y + 1.2, layer, ha='center', fontsize=8, weight='bold')
 
         # Draw nodes (all in black)
-        nx.draw_networkx_nodes(self.graph, pos, node_color='grey', node_size=400, ax=ax)
+        nx.draw_networkx_nodes(self.graph, pos, node_color='grey', node_size=250, ax=ax)
 
         # Draw intralayer edges
         for layer in layer_list:
             layer_edges = [(u, v) for u, v, _ in self.graph.edges(data=True) if u[1] == layer and v[1] == layer]
-            nx.draw_networkx_edges(self.graph, pos, edgelist=layer_edges, edge_color=layer_positions[layer], ax=ax, arrows=False)
+            nx.draw_networkx_edges(self.graph, pos, edgelist=layer_edges,
+                                edge_color=layer_positions[layer], ax=ax, arrows=False)
 
-        # Draw interlayer edges (in grey)
-        interlayer_edges = [(u, v) for u, v, _ in self.graph.edges(data=True) if u[1] != v[1]]
-        nx.draw_networkx_edges(self.graph, pos, edgelist=interlayer_edges, edge_color='gray', style='dashed', ax=ax, arrows=False)
+        # Interlayer edges with unique colors
+        layer_pairs = set((u[1], v[1]) for u, v, _ in self.graph.edges(data=True) if u[1] != v[1])
+        
+        #interlayer_colors = list(mcolors.CSS4_COLORS.values())
+        interlayer_colors = [c for c in mcolors.CSS4_COLORS.values() if mcolors.rgb_to_hsv(mcolors.to_rgb(c))[2] < 0.9]
+        interlayer_colors = {pair: interlayer_colors[i % len(interlayer_colors)] for i, pair in enumerate(layer_pairs)}
 
-        # Draw labels
-        nx.draw_networkx_labels(self.graph, pos, font_size = 8, font_color = "black", labels={n: n[0] for n in self.graph.nodes}, ax=ax)
+        for (u, v, _) in self.graph.edges(data=True):
+            if u[1] != v[1]:
+                pair = (u[1], v[1])
+                color = interlayer_colors.get(pair, 'grey')
+                nx.draw_networkx_edges(self.graph, pos, edgelist=[(u, v)], edge_color=color,
+                                    style='dashed', ax=ax, arrows=False)
+
+        # Draw node labels
+        nx.draw_networkx_labels(self.graph, pos, font_size=4, font_color="black",
+                                labels={n: n[0] for n in self.graph.nodes}, ax=ax)
+
+
+        # Create legend handles
+        legend_handles = []
+
+        # Legend for intralayer edges
+        for layer in layer_list:
+            color = layer_positions[layer]
+            handle = mlines.Line2D([], [], color=color, label=f"{layer}", linewidth=2)
+            legend_handles.append(handle)
+
+        # Legend for interlayer edges
+        for (layer1, layer2), color in interlayer_colors.items():
+            handle = mlines.Line2D([], [], color=color, linestyle='dashed', label=f"{layer1} ↔ {layer2}", linewidth=2)
+            legend_handles.append(handle)
+    
+        # Interlayer handle (shared style)
+        interlayer_handle = mlines.Line2D([], [], color='dimgray', linestyle='dashed', label='Interlayer', linewidth=2)
+        legend_handles.append(interlayer_handle)
+
+        # Draw the legend and move it more to the right
+        ax.legend(
+            handles=legend_handles,
+            loc='upper left',
+            bbox_to_anchor=(1.05, 1),
+            borderaxespad=0.,
+            frameon=True,
+            ncol=1,
+            handlelength=2.5,
+            fontsize=6
+        )
 
         plt.title("MultiDNetwork Visualization")
         plt.axis('off')
-        plt.show()
+        plt.tight_layout()
+
+        if output_path:
+            plt.savefig(output_path+'.'+format, bbox_inches='tight', format=format, dpi=dpi)
+        else:
+            plt.show()

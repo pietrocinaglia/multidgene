@@ -13,4 +13,5 @@ multi-DGeNe
 __version__ = "0.1"
 __author__ = 'Pietro Cinaglia'
 
-from .Multidgene import MultiDGene
+from .MultiDGeNe import MultiDGeNe
+from .MultiDGeNe import MultiDNetwork
