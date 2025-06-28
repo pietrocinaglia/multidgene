@@ -22,27 +22,25 @@ import numpy as np
 class VisualDesigner:
 
     multidimensional_network = None
+    title = "MultiDNetwork Visualization"
 
     def __init__(self, multidimensional_network, output_path:str=None, format='eps', dpi='figure'):
         self.multidimensional_network = multidimensional_network
         self.output_path = output_path
         self.format = format
         self.dpi = dpi
-        self.title = "MultiDNetwork Visualization"
 
     def plot(self):
         pos = {}
         layer_positions = {}
         color_map = list(mcolors.TABLEAU_COLORS.values())
         layer_list = sorted(self.multidimensional_network.layers)
-        spacing = 5
-        # Create legend handles
         legend_handles = []
 
         fig, ax = plt.subplots()
 
-        x_offset_step = 1.5  # horizontal offset between layers
-        y_offset_step = 5    # vertical offset between layers
+        x_offset_step = 1.5 # horizontal offset between layers
+        y_offset_step = 5 # vertical offset between layers
 
         for i, layer in enumerate(layer_list):
             x_offset = 0
@@ -80,8 +78,8 @@ class VisualDesigner:
         for layer in layer_list:
            # Draw intralayer edges
             layer_edges = [(u, v) for u, v, _ in self.multidimensional_network.graph.edges(data=True) if u[1] == layer and v[1] == layer]
-            nx.draw_networkx_edges(self.multidimensional_network.graph, pos, edgelist=layer_edges,
-                                edge_color=layer_positions[layer], ax=ax, arrows=False)
+            nx.draw_networkx_edges(self.multidimensional_network.graph, pos, edgelist=layer_edges, edge_color=layer_positions[layer], ax=ax, arrows=False)
+            
             # Legend for intralayer edges
             color = layer_positions[layer]
             handle = mlines.Line2D([], [], color=color, label=f"{layer}", linewidth=2)
@@ -89,8 +87,6 @@ class VisualDesigner:
 
         # Interlayer edges with unique colors
         layer_pairs = set((u[1], v[1]) for u, v, _ in self.multidimensional_network.graph.edges(data=True) if u[1] != v[1])
-        
-        #interlayer_colors = list(mcolors.CSS4_COLORS.values())
         interlayer_colors = [c for c in mcolors.CSS4_COLORS.values() if mcolors.rgb_to_hsv(mcolors.to_rgb(c))[2] < 0.9]
         interlayer_colors = {pair: interlayer_colors[i % len(interlayer_colors)] for i, pair in enumerate(layer_pairs)}
 
@@ -114,7 +110,7 @@ class VisualDesigner:
         interlayer_handle = mlines.Line2D([], [], color='dimgray', linestyle='dashed', label='Interlayer', linewidth=2)
         legend_handles.append(interlayer_handle)
 
-        # Draw the legend and move it more to the right
+        # Draw legend
         ax.legend(
             handles=legend_handles,
             loc='upper left',
@@ -278,6 +274,7 @@ class VisualDesigner:
             # Layer label above the ellipsoid
             ax.text(x_center, y_center, z_center + rz + 0.3, layer, ha='center', fontsize=10, weight='bold', color=layer_positions[layer])
         '''
+
         # Legend
         legend_handles = []
         for layer in layer_list:
