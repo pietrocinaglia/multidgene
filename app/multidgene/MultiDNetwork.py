@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import networkx as nx
+
 import csv
 from collections import defaultdict
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import matplotlib.patches as patches
-import matplotlib.lines as mlines
+
 import warnings
 
 ###
@@ -17,8 +15,12 @@ import warnings
 # @url: https://github.com/pietrocinaglia/multidgene
 ###
 
+# Own modules
+from .VisualDesigner import VisualDesigner
+
 class MultiDNetwork:
     layers = {}
+    graph = None
 
     def __init__(self):
         self.layers = set()
@@ -131,99 +133,9 @@ class MultiDNetwork:
         return nx.adjacency_matrix(G_layer, nodelist=nodes)
     
     def plot(self, output_path:str=None, format='eps', dpi='figure'):
-        pos = {}
-        layer_positions = {}
-        color_map = list(mcolors.TABLEAU_COLORS.values())
-        layer_list = sorted(self.layers)
-        spacing = 5
-
-        fig, ax = plt.subplots()
-
-        for i, layer in enumerate(layer_list):
-            y_offset = i * spacing
-            layer_nodes = [n for n in self.graph.nodes if n[1] == layer]
-            layer_pos = nx.spring_layout(self.graph.subgraph(layer_nodes), seed=42)
-            for node, coord in layer_pos.items():
-                pos[node] = (coord[0], coord[1] + y_offset)
-
-            layer_positions[layer] = color_map[i % len(color_map)]
-            
-            # Draw layer boundary
-            x_vals = [pos[n][0] for n in layer_nodes]
-            y_vals = [pos[n][1] for n in layer_nodes]
-            if x_vals and y_vals:
-                min_x, max_x = min(x_vals), max(x_vals)
-                min_y, max_y = min(y_vals), max(y_vals)
-                width = (max_x - min_x + 1) + 0.0
-                height = (max_y - min_y + 1) + 1.0
-                ellipse = patches.Ellipse(((min_x + max_x) / 2, (min_y + max_y) / 2), width, height,
-                                        color=layer_positions[layer], alpha=0.2)
-                ax.add_patch(ellipse)
-                ax.text((min_x + max_x) / 2, max_y + 1.2, layer, ha='center', fontsize=8, weight='bold')
-
-        # Draw nodes (all in black)
-        nx.draw_networkx_nodes(self.graph, pos, node_color='grey', node_size=250, ax=ax)
-
-        # Draw intralayer edges
-        for layer in layer_list:
-            layer_edges = [(u, v) for u, v, _ in self.graph.edges(data=True) if u[1] == layer and v[1] == layer]
-            nx.draw_networkx_edges(self.graph, pos, edgelist=layer_edges,
-                                edge_color=layer_positions[layer], ax=ax, arrows=False)
-
-        # Interlayer edges with unique colors
-        layer_pairs = set((u[1], v[1]) for u, v, _ in self.graph.edges(data=True) if u[1] != v[1])
-        
-        #interlayer_colors = list(mcolors.CSS4_COLORS.values())
-        interlayer_colors = [c for c in mcolors.CSS4_COLORS.values() if mcolors.rgb_to_hsv(mcolors.to_rgb(c))[2] < 0.9]
-        interlayer_colors = {pair: interlayer_colors[i % len(interlayer_colors)] for i, pair in enumerate(layer_pairs)}
-
-        for (u, v, _) in self.graph.edges(data=True):
-            if u[1] != v[1]:
-                pair = (u[1], v[1])
-                color = interlayer_colors.get(pair, 'grey')
-                nx.draw_networkx_edges(self.graph, pos, edgelist=[(u, v)], edge_color=color,
-                                    style='dashed', ax=ax, arrows=False)
-
-        # Draw node labels
-        nx.draw_networkx_labels(self.graph, pos, font_size=4, font_color="black",
-                                labels={n: n[0] for n in self.graph.nodes}, ax=ax)
-
-
-        # Create legend handles
-        legend_handles = []
-
-        # Legend for intralayer edges
-        for layer in layer_list:
-            color = layer_positions[layer]
-            handle = mlines.Line2D([], [], color=color, label=f"{layer}", linewidth=2)
-            legend_handles.append(handle)
-
-        # Legend for interlayer edges
-        for (layer1, layer2), color in interlayer_colors.items():
-            handle = mlines.Line2D([], [], color=color, linestyle='dashed', label=f"{layer1} ↔ {layer2}", linewidth=2)
-            legend_handles.append(handle)
+        visual_designer = VisualDesigner(self, output_path, format, dpi='figure')
+        visual_designer.plot()
     
-        # Interlayer handle (shared style)
-        interlayer_handle = mlines.Line2D([], [], color='dimgray', linestyle='dashed', label='Interlayer', linewidth=2)
-        legend_handles.append(interlayer_handle)
-
-        # Draw the legend and move it more to the right
-        ax.legend(
-            handles=legend_handles,
-            loc='upper left',
-            bbox_to_anchor=(1.05, 1),
-            borderaxespad=0.,
-            frameon=True,
-            ncol=1,
-            handlelength=2.5,
-            fontsize=6
-        )
-
-        plt.title("MultiDNetwork Visualization")
-        plt.axis('off')
-        plt.tight_layout()
-
-        if output_path:
-            plt.savefig(output_path+'.'+format, bbox_inches='tight', format=format, dpi=dpi)
-        else:
-            plt.show()
+    def plot3d(self, output_path:str=None, format='eps'):
+        visual_designer = VisualDesigner(self, output_path, format)
+        visual_designer.plot3d()
