@@ -35,7 +35,7 @@ class VisualDesigner:
 
         ellipse = patches.Ellipse(((min_x + max_x) / 2, (min_y + max_y) / 2), width, height, color=color, alpha=0.2)
         ax.add_patch(ellipse)
-        ax.text((min_x + max_x) / 2, max_y + 1.2, label, ha='center', fontsize=8, weight='bold')
+        ax.text((min_x + max_x) / 2, max_y + 1.2, label, ha='center', fontsize=12, weight='bold')
 
     def _get_edges_by_layer(self, layer):
         return [(u, v) for u, v, _ in self.multidimensional_network.graph.edges(data=True) if u[1] == v[1] == layer]
@@ -51,7 +51,7 @@ class VisualDesigner:
             color = layer_positions[layer]
             layer_edges = self._get_edges_by_layer(layer)
             nx.draw_networkx_edges(self.multidimensional_network.graph, pos, edgelist=layer_edges, edge_color=color, ax=ax, arrows=False)
-            legend_handles.append(mlines.Line2D([], [], color=color, label=layer, linewidth=2))
+            legend_handles.append(mlines.Line2D([], [], color=color, label=layer, linewidth=4))
 
         # Draw interlayer edges
         layer_pairs = set((u[1], v[1]) for u, v in self._get_interlayer_edges())
@@ -63,13 +63,13 @@ class VisualDesigner:
             nx.draw_networkx_edges(self.multidimensional_network.graph, pos, edgelist=[(u, v)], edge_color=color, style='dashed', ax=ax, arrows=False)
 
         for (layer1, layer2), color in interlayer_colors.items():
-            legend_handles.append(mlines.Line2D([], [], color=color, linestyle='dashed', label=f"{layer1} ↔ {layer2}", linewidth=2))
+            legend_handles.append(mlines.Line2D([], [], color=color, linestyle='dashed', label=f"{layer1} ↔ {layer2}", linewidth=4))
 
         return legend_handles
 
     def _draw_nodes_and_labels(self, ax, pos):
-        nx.draw_networkx_nodes(self.multidimensional_network.graph, pos, node_color='grey', node_size=250, ax=ax)
-        nx.draw_networkx_labels(self.multidimensional_network.graph, pos, font_size=4, font_color="black",
+        nx.draw_networkx_nodes(self.multidimensional_network.graph, pos, node_color='grey', node_size=350, ax=ax)
+        nx.draw_networkx_labels(self.multidimensional_network.graph, pos, font_size=8, font_color="black",
                                 labels={n: n[0] for n in self.multidimensional_network.graph.nodes}, ax=ax)
 
     def _compute_layer_positions(self):
@@ -81,7 +81,7 @@ class VisualDesigner:
             pos.update(layer_pos)
             layer_positions[layer] = self.color_map[i % len(self.color_map)]
         return pos, layer_positions
-
+    
     def plot(self):
         fig, ax = plt.subplots()
         pos, layer_positions = self._compute_layer_positions()
@@ -91,6 +91,7 @@ class VisualDesigner:
             self._draw_layer_boundary(ax, layer_nodes, pos, layer_positions[layer], layer)
 
         self._draw_nodes_and_labels(ax, pos)
+        
         legend_handles = self._draw_edges(ax, pos, layer_positions)
 
         ax.legend(handles=legend_handles, loc='upper left', bbox_to_anchor=(1.05, 1), borderaxespad=0., frameon=True, fontsize=6)
@@ -229,7 +230,7 @@ class VisualDesigner:
         z_spacing = 10
         layer_positions = {}
 
-        x_offset_step = 2.5
+        x_offset_step = 3
         y_offset_step = 0
 
         # Layout
@@ -260,10 +261,37 @@ class VisualDesigner:
             mode='markers+text',
             text=node_text,
             textposition='top center',
-            marker=dict(size=5, color='black'),
+            marker=dict(size=10, color='#7f7f7f'),
             hoverinfo='text',
             name='Nodes'
         )
+
+        layer_names = []
+        layer_x = []
+        layer_y = []
+        layer_z = []
+
+        for layer in sorted(set(layer for (_, layer) in pos)):
+            xs = [x for (n, l), (x, y, z) in pos.items() if l == layer]
+            ys = [y for (n, l), (x, y, z) in pos.items() if l == layer]
+            zs = [z for (n, l), (x, y, z) in pos.items() if l == layer]
+            if xs and ys and zs:
+                layer_x.append(min(xs) - 0.2)  # adjust position as needed
+                layer_y.append(sum(ys) / len(ys))
+                layer_z.append(sum(zs) / len(zs))
+                layer_names.append(f"{layer}")
+
+        layer_label_traces = []
+        for i, layer in enumerate(layer_names):
+            layer_label_traces.append(go.Scatter3d(
+                x=[layer_x[i]], y=[layer_y[i]], z=[layer_z[i]],
+                mode='text',
+                text=[layer],
+                textposition='middle right',
+                textfont=dict(size=16, color=layer_positions[layer], family="Arial", weight='bold'),
+                hoverinfo='none',
+                showlegend=False
+            ))
 
         # Edges
         interlayer_colors = {}
@@ -277,7 +305,6 @@ class VisualDesigner:
             x_vals = [pos[u][0], pos[v][0], None]
             y_vals = [pos[u][1], pos[v][1], None]
             z_vals = [pos[u][2], pos[v][2], None]
-
             if u[1] == v[1]:  # Intralayer
                 color = layer_positions[u[1]]
                 style = 'solid'
@@ -286,17 +313,18 @@ class VisualDesigner:
                 rev_pair = (v[1], u[1])
                 color = interlayer_colors.get(pair, interlayer_colors.get(rev_pair, 'dimgray'))
                 style = 'dash'
-
             edge_traces.append(go.Scatter3d(
                 x=x_vals, y=y_vals, z=z_vals,
                 mode='lines',
-                line=dict(color=color, width=2, dash=style),
+                line=dict(color=color, width=4, dash=style),
                 hoverinfo='none',
-                showlegend=False  # Individual edges don't show legend
+                showlegend=False
             ))
 
         # Layers
         layer_boxes = []
+        dz = 0.5  # thickness of the layer box
+        extra_space = 3
         for i, layer in enumerate(layer_list):
             layer_nodes = [n for n in self.multidimensional_network.graph.nodes if n[1] == layer]
             if not layer_nodes:
@@ -306,21 +334,39 @@ class VisualDesigner:
             y_vals = [pos[n][1] for n in layer_nodes]
             z = i * z_spacing
 
-            x_min, x_max = min(x_vals)-0.5, max(x_vals)+0.5
-            y_min, y_max = min(y_vals)-0.5, max(y_vals)+0.5
+            x_min, x_max = min(x_vals) - 0.5, max(x_vals) + 0.5
+            y_min, y_max = min(y_vals) - 0.5, max(y_vals) + 0.5
 
             color = layer_positions[layer]
 
+            # Define vertices for bottom and top faces
+            vertices_x = [x_min, x_max, x_max, x_min, x_min, x_max, x_max, x_min]
+            vertices_y = [y_min, y_min, y_max, y_max, y_min, y_min, y_max, y_max]
+            vertices_z = [z-dz] * 4 + [z+dz] * 4
+
+            # Define the triangles composing the 6 faces of the box (12 triangles)
+            i_faces = [
+                0, 1, 2,  0, 2, 3,  # bottom
+                4, 5, 6,  4, 6, 7,  # top
+                0, 1, 5,  0, 5, 4,  # front
+                1, 2, 6,  1, 6, 5,  # right
+                2, 3, 7,  2, 7, 6,  # back
+                3, 0, 4,  3, 4, 7   # left
+            ]
+
             layer_boxes.append(go.Mesh3d(
-                x=[x_min, x_max, x_max, x_min],
-                y=[y_min, y_min, y_max, y_max],
-                z=[z]*4,
+                x=vertices_x,
+                y=vertices_y,
+                z=vertices_z,
                 color=color,
                 opacity=0.15,
+                i=i_faces[0::3],
+                j=i_faces[1::3],
+                k=i_faces[2::3],
                 hoverinfo='skip',
                 showscale=False,
                 name=f"Layer {layer}",
-                showlegend=False  # Mesh3d can't be shown in legend, so set false
+                showlegend=False
             ))
         
         # Layer legend markers
@@ -329,7 +375,7 @@ class VisualDesigner:
             legend_layer_traces.append(go.Scatter3d(
                 x=[None], y=[None], z=[None],  # no points displayed
                 mode='markers',
-                marker=dict(size=8, color=layer_positions[layer]),
+                marker=dict(size=12, color=layer_positions[layer]),
                 name=f"Layer {layer}",
                 showlegend=True
             ))
@@ -346,7 +392,7 @@ class VisualDesigner:
             ))
 
         # Combine all traces
-        data = layer_boxes + edge_traces + [node_trace] + legend_layer_traces + legend_interlayer_traces
+        data = layer_boxes + layer_label_traces + edge_traces + [node_trace] + legend_layer_traces + legend_interlayer_traces
 
         fig = go.Figure(data=data)
 

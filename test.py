@@ -19,7 +19,7 @@ from app.multidgene import MultiDGeNe
 WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 genes_of_interest = ['BRCA1','MZT2B','TP53','DDB2','USP24','ANAPC15','PSMD14','COP1']
-tissues_of_interest = ['Brain_Cortex','Brain_Hippocampus','Liver','Thyroid']#,'Stomach','Liver']
+tissues_of_interest = ['Brain_Cortex','Brain_Hippocampus','Liver','Thyroid','Stomach','Pancreas','Ovary']
 mode = 'diff_exp'
 
 ###
@@ -43,7 +43,7 @@ multidgene = MultiDGeNe(genes_of_interest, tissues_of_interest, data_path=WORKSP
 multidimensional_network, edge_colors = multidgene.construct_multidimensional_network()
 
 # Plotting multidimensional_network
-#multidimensional_network.plot3d()
+#multidimensional_network.plot()
 
 fig = multidimensional_network.plot3d_as_html()
 fig.write_html(WORKSPACE+'multidimensional_network.html')
