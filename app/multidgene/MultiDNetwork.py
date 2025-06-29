@@ -133,9 +133,16 @@ class MultiDNetwork:
         return nx.adjacency_matrix(G_layer, nodelist=nodes)
     
     def plot(self, output_path:str=None, format='eps', dpi='figure'):
+        print("Plotting (2D)...")
         visual_designer = VisualDesigner(self, output_path, format, dpi='figure')
         visual_designer.plot()
     
     def plot3d(self, output_path:str=None, format='eps'):
+        print("Plotting (3D)...")
         visual_designer = VisualDesigner(self, output_path, format)
         visual_designer.plot3d()
+
+    def plot3d_as_html(self):
+        print("Generating 3D Plot (HTML)...")
+        visual_designer = VisualDesigner(self)
+        return visual_designer.generate_3d_plotly()

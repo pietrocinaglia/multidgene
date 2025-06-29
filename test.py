@@ -43,7 +43,16 @@ multidgene = MultiDGeNe(genes_of_interest, tissues_of_interest, data_path=WORKSP
 multidimensional_network, edge_colors = multidgene.construct_multidimensional_network()
 
 # Plotting multidimensional_network
-multidimensional_network.plot()
+#multidimensional_network.plot3d()
+
+fig = multidimensional_network.plot3d_as_html()
+fig.write_html(WORKSPACE+'multidimensional_network.html')
+
+'''
+from fastapi.responses import HTMLResponse
+html_content = fig.to_html(include_plotlyjs='cdn')
+return HTMLResponse(content=html_content)
+'''
 # multidimensional_network.plot(output_path=WORKSPACE+'multidimensional_network', format='eps')
 # multidimensional_network.plot(output_path=WORKSPACE+'multidimensional_network', format='png', dpi=500)
 

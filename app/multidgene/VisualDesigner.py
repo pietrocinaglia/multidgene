@@ -5,134 +5,106 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.patches as patches
 import matplotlib.lines as mlines
-from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-import numpy as np
 
-###
-# @project: multi-DGeNe
-# @author: Pietro Cinaglia
-# @mail: cinaglia@unicz.it
-# @description: Multi-Dimensional Gene Network (multi-DGeNe) inference, bridging Co-Expression and Expression Dynamics across tissues.
-# @url: https://github.com/pietrocinaglia/multidgene
-###
-
-# Own modules
+import plotly.graph_objects as go
 
 class VisualDesigner:
 
-    multidimensional_network = None
-    title = "MultiDNetwork Visualization"
-
-    def __init__(self, multidimensional_network, output_path:str=None, format='eps', dpi='figure'):
+    def __init__(self, multidimensional_network, output_path: str = None, format='eps', dpi='figure'):
         self.multidimensional_network = multidimensional_network
         self.output_path = output_path
         self.format = format
         self.dpi = dpi
+        self.title = "MultiDNetwork Visualization"
+        self.color_map = list(mcolors.TABLEAU_COLORS.values())
 
-    def plot(self):
-        pos = {}
-        layer_positions = {}
-        color_map = list(mcolors.TABLEAU_COLORS.values())
-        layer_list = sorted(self.multidimensional_network.layers)
+    def _compute_positions(self, layer_nodes, offset=(0, 0), seed=42):
+        layout = nx.spring_layout(self.multidimensional_network.graph.subgraph(layer_nodes), seed=seed)
+        return {node: (coord[0] + offset[0], coord[1] + offset[1]) for node, coord in layout.items()}
+
+    def _draw_layer_boundary(self, ax, layer_nodes, pos, color, label):
+        if not layer_nodes:
+            return
+
+        x_vals = [pos[n][0] for n in layer_nodes]
+        y_vals = [pos[n][1] for n in layer_nodes]
+        min_x, max_x = min(x_vals), max(x_vals)
+        min_y, max_y = min(y_vals), max(y_vals)
+        width, height = max_x - min_x + 1.0, max_y - min_y + 2.0
+
+        ellipse = patches.Ellipse(((min_x + max_x) / 2, (min_y + max_y) / 2), width, height, color=color, alpha=0.2)
+        ax.add_patch(ellipse)
+        ax.text((min_x + max_x) / 2, max_y + 1.2, label, ha='center', fontsize=8, weight='bold')
+
+    def _get_edges_by_layer(self, layer):
+        return [(u, v) for u, v, _ in self.multidimensional_network.graph.edges(data=True) if u[1] == v[1] == layer]
+
+    def _get_interlayer_edges(self):
+        return [(u, v) for u, v, _ in self.multidimensional_network.graph.edges(data=True) if u[1] != v[1]]
+
+    def _draw_edges(self, ax, pos, layer_positions):
         legend_handles = []
 
-        fig, ax = plt.subplots()
-
-        x_offset_step = 1.5 # horizontal offset between layers
-        y_offset_step = 5 # vertical offset between layers
-
-        for i, layer in enumerate(layer_list):
-            x_offset = 0
-            y_offset = i * y_offset_step
-            if i %2 == 0:
-                x_offset = x_offset_step
-            layer_nodes = [n for n in self.multidimensional_network.graph.nodes if n[1] == layer]
-            layer_pos = nx.spring_layout(self.multidimensional_network.graph.subgraph(layer_nodes), seed=42)
-            for node, coord in layer_pos.items():
-                # shift x and y coordinates
-                pos[node] = (coord[0] + x_offset, coord[1] + y_offset)
-
-            layer_positions[layer] = color_map[i % len(color_map)]
-            
-            # Draw layer boundary
-            x_vals = [pos[n][0] for n in layer_nodes]
-            y_vals = [pos[n][1] for n in layer_nodes]
-            if x_vals and y_vals:
-                min_x, max_x = min(x_vals), max(x_vals)
-                min_y, max_y = min(y_vals), max(y_vals)
-                width = (max_x - min_x + 1) + 0.0
-                height = (max_y - min_y + 1) + 1.0
-                
-                ellipse = patches.Ellipse(((min_x + max_x) / 2, (min_y + max_y) / 2), width, height, color=layer_positions[layer], alpha=0.2)
-                ax.add_patch(ellipse)
-                #rectangle = patches.Rectangle((min_x - 0.5, min_y - 0.5), width, height, linewidth=0.8, edgecolor=layer_positions[layer], facecolor=layer_positions[layer], alpha=0.2)
-                #ax.add_patch(rectangle)
-
-                ax.text((min_x + max_x) / 2, max_y + 1.2, layer, ha='center', fontsize=8, weight='bold')
-
-        # Draw nodes (all in black)
-        nx.draw_networkx_nodes(self.multidimensional_network.graph, pos, node_color='grey', node_size=250, ax=ax)
-
-        # Intralayer edges
-        for layer in layer_list:
-           # Draw intralayer edges
-            layer_edges = [(u, v) for u, v, _ in self.multidimensional_network.graph.edges(data=True) if u[1] == layer and v[1] == layer]
-            nx.draw_networkx_edges(self.multidimensional_network.graph, pos, edgelist=layer_edges, edge_color=layer_positions[layer], ax=ax, arrows=False)
-            
-            # Legend for intralayer edges
+        # Draw intralayer edges
+        for layer in sorted(self.multidimensional_network.layers):
             color = layer_positions[layer]
-            handle = mlines.Line2D([], [], color=color, label=f"{layer}", linewidth=2)
-            legend_handles.append(handle)
+            layer_edges = self._get_edges_by_layer(layer)
+            nx.draw_networkx_edges(self.multidimensional_network.graph, pos, edgelist=layer_edges, edge_color=color, ax=ax, arrows=False)
+            legend_handles.append(mlines.Line2D([], [], color=color, label=layer, linewidth=2))
 
-        # Interlayer edges with unique colors
-        layer_pairs = set((u[1], v[1]) for u, v, _ in self.multidimensional_network.graph.edges(data=True) if u[1] != v[1])
-        interlayer_colors = [c for c in mcolors.CSS4_COLORS.values() if mcolors.rgb_to_hsv(mcolors.to_rgb(c))[2] < 0.9]
-        interlayer_colors = {pair: interlayer_colors[i % len(interlayer_colors)] for i, pair in enumerate(layer_pairs)}
+        # Draw interlayer edges
+        layer_pairs = set((u[1], v[1]) for u, v in self._get_interlayer_edges())
+        interlayer_colors = {pair: color for pair, color in zip(layer_pairs, mcolors.CSS4_COLORS.values())}
 
-        for (u, v, _) in self.multidimensional_network.graph.edges(data=True):
-            if u[1] != v[1]:
-                pair = (u[1], v[1])
-                color = interlayer_colors.get(pair, 'grey')
-                nx.draw_networkx_edges(self.multidimensional_network.graph, pos, edgelist=[(u, v)], edge_color=color,
-                                    style='dashed', ax=ax, arrows=False)
+        for u, v in self._get_interlayer_edges():
+            pair = (u[1], v[1])
+            color = interlayer_colors.get(pair, 'grey')
+            nx.draw_networkx_edges(self.multidimensional_network.graph, pos, edgelist=[(u, v)], edge_color=color, style='dashed', ax=ax, arrows=False)
 
-        # Draw node labels
+        for (layer1, layer2), color in interlayer_colors.items():
+            legend_handles.append(mlines.Line2D([], [], color=color, linestyle='dashed', label=f"{layer1} ↔ {layer2}", linewidth=2))
+
+        return legend_handles
+
+    def _draw_nodes_and_labels(self, ax, pos):
+        nx.draw_networkx_nodes(self.multidimensional_network.graph, pos, node_color='grey', node_size=250, ax=ax)
         nx.draw_networkx_labels(self.multidimensional_network.graph, pos, font_size=4, font_color="black",
                                 labels={n: n[0] for n in self.multidimensional_network.graph.nodes}, ax=ax)
 
-        # Legend for interlayer edges
-        for (layer1, layer2), color in interlayer_colors.items():
-            handle = mlines.Line2D([], [], color=color, linestyle='dashed', label=f"{layer1} ↔ {layer2}", linewidth=2)
-            legend_handles.append(handle)
-    
-        # Interlayer handle (shared style)
-        interlayer_handle = mlines.Line2D([], [], color='dimgray', linestyle='dashed', label='Interlayer', linewidth=2)
-        legend_handles.append(interlayer_handle)
+    def _compute_layer_positions(self):
+        pos, layer_positions = {}, {}
+        for i, layer in enumerate(sorted(self.multidimensional_network.layers)):
+            offset = (1.5 if i % 2 == 0 else 0, i * 5)
+            layer_nodes = [n for n in self.multidimensional_network.graph.nodes if n[1] == layer]
+            layer_pos = self._compute_positions(layer_nodes, offset)
+            pos.update(layer_pos)
+            layer_positions[layer] = self.color_map[i % len(self.color_map)]
+        return pos, layer_positions
 
-        # Draw legend
-        ax.legend(
-            handles=legend_handles,
-            loc='upper left',
-            bbox_to_anchor=(1.05, 1),
-            borderaxespad=0.,
-            frameon=True,
-            ncol=1,
-            handlelength=2.5,
-            fontsize=6
-        )
+    def plot(self):
+        fig, ax = plt.subplots()
+        pos, layer_positions = self._compute_layer_positions()
 
-        plt.title(self.title)
-        plt.axis('off')
+        for layer in sorted(self.multidimensional_network.layers):
+            layer_nodes = [n for n in self.multidimensional_network.graph.nodes if n[1] == layer]
+            self._draw_layer_boundary(ax, layer_nodes, pos, layer_positions[layer], layer)
+
+        self._draw_nodes_and_labels(ax, pos)
+        legend_handles = self._draw_edges(ax, pos, layer_positions)
+
+        ax.legend(handles=legend_handles, loc='upper left', bbox_to_anchor=(1.05, 1), borderaxespad=0., frameon=True, fontsize=6)
+        ax.set_title(self.title)
+        ax.axis('off')
         plt.tight_layout()
 
         if self.output_path:
-            plt.savefig(self.output_path+'.'+format, bbox_inches='tight', format=self.format, dpi=self.dpi)
+            plt.savefig(f"{self.output_path}.{self.format}", bbox_inches='tight', format=self.format, dpi=self.dpi)
         else:
             plt.show()
 
-    def plot3d(self,):
 
+    def plot3d(self):
         fig = plt.figure(figsize=(12, 9))
         ax = fig.add_subplot(111, projection='3d')
 
@@ -140,11 +112,9 @@ class VisualDesigner:
         layer_positions = {}
         color_map = list(mcolors.TABLEAU_COLORS.values())
         layer_list = sorted(self.multidimensional_network.layers)
-
-        z_spacing = 10  # space between layers
+        z_spacing = 10
 
         layer_bounds = {}
-
         x_offset_step = 2.5
         y_offset_step = 0
 
@@ -161,130 +131,84 @@ class VisualDesigner:
 
             layer_positions[layer] = color_map[i % len(color_map)]
 
-            # Store bounding box coordinates
             x_vals = [pos[n][0] for n in layer_nodes]
             y_vals = [pos[n][1] for n in layer_nodes]
             if x_vals and y_vals:
-                min_x, max_x = min(x_vals), max(x_vals)
-                min_y, max_y = min(y_vals), max(y_vals)
                 padding = 0.6
                 layer_bounds[layer] = {
-                    "x_min": min_x - padding, "x_max": max_x + padding,
-                    "y_min": min_y - padding, "y_max": max_y + padding,
+                    "x_min": min(x_vals) - padding,
+                    "x_max": max(x_vals) + padding,
+                    "y_min": min(y_vals) - padding,
+                    "y_max": max(y_vals) + padding,
                     "z": z
                 }
 
         # Draw nodes
         for node, (x, y, z) in pos.items():
-            ax.scatter(x, y, z, color='grey', s=45)
-
-        # Node labels
-        for node, (x, y, z) in pos.items():
+            ax.scatter(x, y, z, color='black', s=55)
             ax.text(x, y, z + 0.5, node[0], fontsize=6)
 
         # Intralayer edges
         for layer in layer_list:
             color = layer_positions[layer]
-            for u, v, _ in self.multidimensional_network.graph.edges(data=True):
-                if u[1] == v[1] == layer:
-                    x_vals = [pos[u][0], pos[v][0]]
-                    y_vals = [pos[u][1], pos[v][1]]
-                    z_vals = [pos[u][2], pos[v][2]]
-                    ax.plot(x_vals, y_vals, z_vals, color=color, linewidth=1.5)
-
-        # Interlayer edges
-        interlayer_colors_raw = [c for c in mcolors.CSS4_COLORS.values() if mcolors.rgb_to_hsv(mcolors.to_rgb(c))[2] < 0.85]
-        interlayer_pairs = list(set((u[1], v[1]) for u, v, _ in self.multidimensional_network.graph.edges(data=True) if u[1] != v[1]))
-        interlayer_colors = {pair: interlayer_colors_raw[i % len(interlayer_colors_raw)] for i, pair in enumerate(interlayer_pairs)}
-
-        for u, v, _ in self.multidimensional_network.graph.edges(data=True):
-            if u[1] != v[1]:
-                pair = (u[1], v[1])
-                color = interlayer_colors.get(pair, 'dimgray')
+            edges = self._get_edges_by_layer(layer)
+            for u, v in edges:
                 x_vals = [pos[u][0], pos[v][0]]
                 y_vals = [pos[u][1], pos[v][1]]
                 z_vals = [pos[u][2], pos[v][2]]
-                ax.plot(x_vals, y_vals, z_vals, color=color, linestyle='dashed', linewidth=1)
+                ax.plot(x_vals, y_vals, z_vals, color=color, linewidth=1.5)
 
-        # Draw 3D colored boxes around each layer
+        # Interlayer edges
+        interlayer_edges = self._get_interlayer_edges()
+        interlayer_colors_raw = [
+            c for c in mcolors.CSS4_COLORS.values()
+            if mcolors.rgb_to_hsv(mcolors.to_rgb(c))[2] < 0.85
+        ]
+        interlayer_pairs = list(set((u[1], v[1]) for u, v in interlayer_edges))
+        interlayer_colors = {
+            pair: interlayer_colors_raw[i % len(interlayer_colors_raw)]
+            for i, pair in enumerate(interlayer_pairs)
+        }
 
-        # Parallelepiped
-        for layer, bounds in layer_bounds.items():
-            x_min = bounds["x_min"]
-            x_max = bounds["x_max"]
-            y_min = bounds["y_min"]
-            y_max = bounds["y_max"]
-            z = bounds["z"]
-            dz = 1.0  # height of the box
+        for u, v in interlayer_edges:
+            pair = (u[1], v[1])
+            color = interlayer_colors.get(pair, 'dimgray')
+            x_vals = [pos[u][0], pos[v][0]]
+            y_vals = [pos[u][1], pos[v][1]]
+            z_vals = [pos[u][2], pos[v][2]]
+            ax.plot(x_vals, y_vals, z_vals, color=color, linestyle='dashed', linewidth=1)
 
-            # Vertices of the bottom and top face
-            verts = [
-                [x_min, y_min, z],
-                [x_max, y_min, z],
-                [x_max, y_max, z],
-                [x_min, y_max, z],
-                [x_min, y_min, z + dz],
-                [x_max, y_min, z + dz],
-                [x_max, y_max, z + dz],
-                [x_min, y_max, z + dz]
-            ]
-
-            faces = [
-                [verts[0], verts[1], verts[2], verts[3]],  # bottom
-                [verts[4], verts[5], verts[6], verts[7]],  # top
-                [verts[0], verts[1], verts[5], verts[4]],  # front
-                [verts[1], verts[2], verts[6], verts[5]],  # right
-                [verts[2], verts[3], verts[7], verts[6]],  # back
-                [verts[3], verts[0], verts[4], verts[7]]   # left
-            ]
-        
-            box = Poly3DCollection(faces, alpha=0.15, facecolor=layer_positions[layer], edgecolor=layer_positions[layer])
-            ax.add_collection3d(box)
-
-            # Layer label
-            ax.text((x_min + x_max) / 2, y_max + 0.5, z + dz + 0.3, layer, ha='center', fontsize=10, weight='bold', color=layer_positions[layer])
-
-        '''
+        # 3D layer boxes
         for layer, bounds in layer_bounds.items():
             x_min, x_max = bounds["x_min"], bounds["x_max"]
             y_min, y_max = bounds["y_min"], bounds["y_max"]
             z = bounds["z"]
-            
-            # Calculate center and radii
-            x_center = (x_min + x_max) / 2
-            y_center = (y_min + y_max) / 2
-            z_center = z + 0.5  # center in z, raise half the dz of your previous box height
-            
-            rx = (x_max - x_min) / 2  # radius x-axis
-            ry = (y_max - y_min) / 2  # radius y-axis
-            rz = 0.5                  # radius z-axis (height/2)
-            
-            # Create a grid of angles
-            u = np.linspace(0, 2 * np.pi, 40)
-            v = np.linspace(0, np.pi, 20)
-            
-            # Parametric equations for the ellipsoid surface
-            x = x_center + rx * np.outer(np.cos(u), np.sin(v))
-            y = y_center + ry * np.outer(np.sin(u), np.sin(v))
-            z_ellipsoid = z_center + rz * np.outer(np.ones_like(u), np.cos(v))
-            
-            # Plot the surface
-            ax.plot_surface(x, y, z_ellipsoid, color=layer_positions[layer], alpha=0.15, edgecolor='k', linewidth=0.3)
-            
-            # Layer label above the ellipsoid
-            ax.text(x_center, y_center, z_center + rz + 0.3, layer, ha='center', fontsize=10, weight='bold', color=layer_positions[layer])
-        '''
+            dz = 1.0
+
+            verts = [
+                [x_min, y_min, z], [x_max, y_min, z], [x_max, y_max, z], [x_min, y_max, z],
+                [x_min, y_min, z + dz], [x_max, y_min, z + dz],
+                [x_max, y_max, z + dz], [x_min, y_max, z + dz]
+            ]
+            faces = [
+                [verts[0], verts[1], verts[2], verts[3]],
+                [verts[4], verts[5], verts[6], verts[7]],
+                [verts[0], verts[1], verts[5], verts[4]],
+                [verts[1], verts[2], verts[6], verts[5]],
+                [verts[2], verts[3], verts[7], verts[6]],
+                [verts[3], verts[0], verts[4], verts[7]]
+            ]
+            box = Poly3DCollection(faces, alpha=0.15, facecolor=layer_positions[layer], edgecolor=layer_positions[layer])
+            ax.add_collection3d(box)
+
+            ax.text((x_min + x_max) / 2, y_max + 0.3, z + dz + 0.3, layer, ha='center', fontsize=10, weight='bold', color=layer_positions[layer])
 
         # Legend
-        legend_handles = []
-        for layer in layer_list:
-            handle = mlines.Line2D([], [], color=layer_positions[layer], label=layer, linewidth=2)
-            legend_handles.append(handle)
-
-        for (l1, l2), color in interlayer_colors.items():
-            handle = mlines.Line2D([], [], color=color, linestyle='dashed', label=f"{l1} ↔ {l2}", linewidth=2)
-            legend_handles.append(handle)
-
+        legend_handles = [mlines.Line2D([], [], color=layer_positions[layer], label=layer, linewidth=2) for layer in layer_list]
+        legend_handles += [
+            mlines.Line2D([], [], color=color, linestyle='dashed', label=f"{l1} ↔ {l2}", linewidth=2)
+            for (l1, l2), color in interlayer_colors.items()
+        ]
         ax.legend(handles=legend_handles, loc='upper left', bbox_to_anchor=(1.05, 1), fontsize=8)
 
         ax.set_title(self.title, fontsize=13, weight='bold')
@@ -297,3 +221,143 @@ class VisualDesigner:
         else:
             plt.show()
 
+
+    def generate_3d_plotly(self):
+        pos = {}
+        color_map = list(mcolors.TABLEAU_COLORS.values())
+        layer_list = sorted(self.multidimensional_network.layers)
+        z_spacing = 10
+        layer_positions = {}
+
+        x_offset_step = 2.5
+        y_offset_step = 0
+
+        # Layout
+        for i, layer in enumerate(layer_list):
+            z = i * z_spacing
+            x_offset = x_offset_step if i % 2 == 0 else 0
+            y_offset = i * y_offset_step
+            layer_nodes = [n for n in self.multidimensional_network.graph.nodes if n[1] == layer]
+            layout = nx.spring_layout(self.multidimensional_network.graph.subgraph(layer_nodes), seed=42)
+
+            for node, (x, y) in layout.items():
+                pos[node] = (x + x_offset, y + y_offset, z)
+
+            layer_positions[layer] = color_map[i % len(color_map)]
+
+        # Nodes
+        node_x, node_y, node_z, node_text = [], [], [], []
+        for node, (x, y, z) in pos.items():
+            node_x.append(x)
+            node_y.append(y)
+            node_z.append(z)
+            node_text.append(node[0])
+
+        node_trace = go.Scatter3d(
+            x=node_x,
+            y=node_y,
+            z=node_z,
+            mode='markers+text',
+            text=node_text,
+            textposition='top center',
+            marker=dict(size=5, color='black'),
+            hoverinfo='text',
+            name='Nodes'
+        )
+
+        # Edges
+        interlayer_colors = {}
+        interlayer_pairs = list(set((u[1], v[1]) for u, v in self.multidimensional_network.graph.edges() if u[1] != v[1]))
+        interlayer_palette = [c for c in mcolors.CSS4_COLORS.values() if mcolors.rgb_to_hsv(mcolors.to_rgb(c))[2] < 0.85]
+        for i, pair in enumerate(interlayer_pairs):
+            interlayer_colors[pair] = interlayer_palette[i % len(interlayer_palette)]
+
+        edge_traces = []
+        for u, v in self.multidimensional_network.graph.edges():
+            x_vals = [pos[u][0], pos[v][0], None]
+            y_vals = [pos[u][1], pos[v][1], None]
+            z_vals = [pos[u][2], pos[v][2], None]
+
+            if u[1] == v[1]:  # Intralayer
+                color = layer_positions[u[1]]
+                style = 'solid'
+            else:  # Interlayer
+                pair = (u[1], v[1])
+                rev_pair = (v[1], u[1])
+                color = interlayer_colors.get(pair, interlayer_colors.get(rev_pair, 'dimgray'))
+                style = 'dash'
+
+            edge_traces.append(go.Scatter3d(
+                x=x_vals, y=y_vals, z=z_vals,
+                mode='lines',
+                line=dict(color=color, width=2, dash=style),
+                hoverinfo='none',
+                showlegend=False  # Individual edges don't show legend
+            ))
+
+        # Layers
+        layer_boxes = []
+        for i, layer in enumerate(layer_list):
+            layer_nodes = [n for n in self.multidimensional_network.graph.nodes if n[1] == layer]
+            if not layer_nodes:
+                continue
+
+            x_vals = [pos[n][0] for n in layer_nodes]
+            y_vals = [pos[n][1] for n in layer_nodes]
+            z = i * z_spacing
+
+            x_min, x_max = min(x_vals)-0.5, max(x_vals)+0.5
+            y_min, y_max = min(y_vals)-0.5, max(y_vals)+0.5
+
+            color = layer_positions[layer]
+
+            layer_boxes.append(go.Mesh3d(
+                x=[x_min, x_max, x_max, x_min],
+                y=[y_min, y_min, y_max, y_max],
+                z=[z]*4,
+                color=color,
+                opacity=0.15,
+                hoverinfo='skip',
+                showscale=False,
+                name=f"Layer {layer}",
+                showlegend=False  # Mesh3d can't be shown in legend, so set false
+            ))
+        
+        # Layer legend markers
+        legend_layer_traces = []
+        for layer in layer_list:
+            legend_layer_traces.append(go.Scatter3d(
+                x=[None], y=[None], z=[None],  # no points displayed
+                mode='markers',
+                marker=dict(size=8, color=layer_positions[layer]),
+                name=f"Layer {layer}",
+                showlegend=True
+            ))
+
+        # Interlayer edges legend traces
+        legend_interlayer_traces = []
+        for (l1, l2), color in interlayer_colors.items():
+            legend_interlayer_traces.append(go.Scatter3d(
+                x=[None, None], y=[None, None], z=[None, None],
+                mode='lines',
+                line=dict(color=color, width=4, dash='dash'),
+                name=f"Interlayer {l1} ↔ {l2}",
+                showlegend=True
+            ))
+
+        # Combine all traces
+        data = layer_boxes + edge_traces + [node_trace] + legend_layer_traces + legend_interlayer_traces
+
+        fig = go.Figure(data=data)
+
+        fig.update_layout(
+            scene=dict(
+                xaxis=dict(visible=False),
+                yaxis=dict(visible=False),
+                zaxis=dict(visible=False),
+            ),
+            title=self.title,
+            margin=dict(l=0, r=0, b=0, t=40),
+        )
+
+        return fig
