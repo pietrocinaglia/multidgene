@@ -8,6 +8,8 @@ import matplotlib.lines as mlines
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 import plotly.graph_objects as go
+import plotly.io as pio
+import random
 
 class VisualDesigner:
 
@@ -223,28 +225,29 @@ class VisualDesigner:
             plt.show()
 
 
-    def generate_3d_plotly(self):
-        pos = {}
-        color_map = list(mcolors.TABLEAU_COLORS.values())
+    def generate_3d_plotly(self, scroll_height_px:int=800):
         layer_list = sorted(self.multidimensional_network.layers)
-        z_spacing = 10
-        layer_positions = {}
 
+        layer_thickness = 0.5
         x_offset_step = 3
         y_offset_step = 0
+        z_offset_step = 10
 
         # Layout
+        layer_positions = {}
+        pos = {}
         for i, layer in enumerate(layer_list):
-            z = i * z_spacing
             x_offset = x_offset_step if i % 2 == 0 else 0
             y_offset = i * y_offset_step
+            z = i * z_offset_step
+
             layer_nodes = [n for n in self.multidimensional_network.graph.nodes if n[1] == layer]
             layout = nx.spring_layout(self.multidimensional_network.graph.subgraph(layer_nodes), seed=42)
 
             for node, (x, y) in layout.items():
                 pos[node] = (x + x_offset, y + y_offset, z)
 
-            layer_positions[layer] = color_map[i % len(color_map)]
+            layer_positions[layer] = self.color_map[i % len(self.color_map)]
 
         # Nodes
         node_x, node_y, node_z, node_text = [], [], [], []
@@ -305,6 +308,7 @@ class VisualDesigner:
             x_vals = [pos[u][0], pos[v][0], None]
             y_vals = [pos[u][1], pos[v][1], None]
             z_vals = [pos[u][2], pos[v][2], None]
+
             if u[1] == v[1]:  # Intralayer
                 color = layer_positions[u[1]]
                 style = 'solid'
@@ -323,8 +327,6 @@ class VisualDesigner:
 
         # Layers
         layer_boxes = []
-        dz = 0.5  # thickness of the layer box
-        extra_space = 3
         for i, layer in enumerate(layer_list):
             layer_nodes = [n for n in self.multidimensional_network.graph.nodes if n[1] == layer]
             if not layer_nodes:
@@ -332,7 +334,7 @@ class VisualDesigner:
 
             x_vals = [pos[n][0] for n in layer_nodes]
             y_vals = [pos[n][1] for n in layer_nodes]
-            z = i * z_spacing
+            z = i * z_offset_step
 
             x_min, x_max = min(x_vals) - 0.5, max(x_vals) + 0.5
             y_min, y_max = min(y_vals) - 0.5, max(y_vals) + 0.5
@@ -342,7 +344,7 @@ class VisualDesigner:
             # Define vertices for bottom and top faces
             vertices_x = [x_min, x_max, x_max, x_min, x_min, x_max, x_max, x_min]
             vertices_y = [y_min, y_min, y_max, y_max, y_min, y_min, y_max, y_max]
-            vertices_z = [z-dz] * 4 + [z+dz] * 4
+            vertices_z = [z-layer_thickness] * 4 + [z+layer_thickness] * 4
 
             # Define the triangles composing the 6 faces of the box (12 triangles)
             i_faces = [
@@ -373,7 +375,7 @@ class VisualDesigner:
         legend_layer_traces = []
         for layer in layer_list:
             legend_layer_traces.append(go.Scatter3d(
-                x=[None], y=[None], z=[None],  # no points displayed
+                x=[None], y=[None], z=[None],
                 mode='markers',
                 marker=dict(size=12, color=layer_positions[layer]),
                 name=f"Layer {layer}",
@@ -406,4 +408,16 @@ class VisualDesigner:
             margin=dict(l=0, r=0, b=0, t=40),
         )
 
-        return fig
+        plot_html = pio.to_html(fig, full_html=False, include_plotlyjs='cdn')
+
+        scrollable_html = f"""
+        <div style="height:{scroll_height_px}px; overflow-y:auto; border:1px solid #ccc;">
+            {plot_html}
+        </div>
+        """
+
+        if self.output_path:
+            with open(self.output_path, "w", encoding="utf-8") as f:
+                f.write(scrollable_html)
+
+        return scrollable_html

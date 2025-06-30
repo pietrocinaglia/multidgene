@@ -19,8 +19,6 @@ import warnings
 from .VisualDesigner import VisualDesigner
 
 class MultiDNetwork:
-    layers = {}
-    graph = None
 
     def __init__(self):
         self.layers = set()
@@ -33,16 +31,16 @@ class MultiDNetwork:
         self.layers.update(layer_ids)
 
     def add_node(self, node_id: str, layer_id: str):
-        if layer_id is None and self.layers is None:
-            warnings.warn("You can not add nodes without define layers!")
+        if layer_id is None and not self.layers:
+            warnings.warn("You cannot add nodes without defining layers!")
             return
         
         self.add_layer(layer_id)
         self.graph.add_node((node_id, layer_id))
 
     def add_nodes(self, nodes: set, layer_id: str = None):
-        if layer_id is None and self.layers is None:
-            warnings.warn("You can not add nodes without define layers!")
+        if layer_id is None and not self.layers:
+            warnings.warn("You cannot add nodes without defining layers!")
             return
 
         if layer_id is None:
@@ -64,10 +62,9 @@ class MultiDNetwork:
         return True
 
     def has_node(self, node_id:str, layer_id: str = None) -> bool:
-        for (node, layer) in self.graph.nodes:
-            if node_id == node and (layer_id is None or layer_id == layer):
-                return True
-        return False
+        if layer_id:
+            return (node_id, layer_id) in self.graph.nodes
+        return any(data[0] == node_id for data in self.graph.nodes)
     
     def get_nodes(self, layer_id: str = None) -> dict:
         result = defaultdict(set)
@@ -142,7 +139,7 @@ class MultiDNetwork:
         visual_designer = VisualDesigner(self, output_path, format)
         visual_designer.plot3d()
 
-    def plot3d_as_html(self):
+    def generate_3d_plotly(self, output_path:str=None):
         print("Generating 3D Plot (HTML)...")
-        visual_designer = VisualDesigner(self)
+        visual_designer = VisualDesigner(self, output_path=output_path)
         return visual_designer.generate_3d_plotly()

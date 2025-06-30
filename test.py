@@ -19,7 +19,7 @@ from app.multidgene import MultiDGeNe
 WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 genes_of_interest = ['BRCA1','MZT2B','TP53','DDB2','USP24','ANAPC15','PSMD14','COP1']
-tissues_of_interest = ['Brain_Cortex','Brain_Hippocampus','Liver','Thyroid','Stomach','Pancreas','Ovary']
+tissues_of_interest = ['Brain_Cortex','Brain_Hippocampus','Liver','Thyroid','Stomach','Pancreas']#,'Ovary']
 mode = 'diff_exp'
 
 ###
@@ -45,13 +45,13 @@ multidimensional_network, edge_colors = multidgene.construct_multidimensional_ne
 # Plotting multidimensional_network
 #multidimensional_network.plot()
 
-fig = multidimensional_network.plot3d_as_html()
-fig.write_html(WORKSPACE+'multidimensional_network.html')
+html = multidimensional_network.generate_3d_plotly(output_path=WORKSPACE+'multidimensional_network.html')
 
 '''
-from fastapi.responses import HTMLResponse
-html_content = fig.to_html(include_plotlyjs='cdn')
-return HTMLResponse(content=html_content)
+@app.get("/network/3d", response_class=HTMLResponse)
+def get_3d_network():
+    html = designer.generate_3d_plotly()
+    return HTMLResponse(content=html)
 '''
 # multidimensional_network.plot(output_path=WORKSPACE+'multidimensional_network', format='eps')
 # multidimensional_network.plot(output_path=WORKSPACE+'multidimensional_network', format='png', dpi=500)
