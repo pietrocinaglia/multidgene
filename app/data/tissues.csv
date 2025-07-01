@@ -13,13 +13,13 @@ Brain - Spinal cord (cervical c-1),Brain_Spinal_cord_cervical_c-1,Brain
 Brain - Substantia nigra,Brain_Substantia_nigra,Brain
 Adipose - Subcutaneous,Adipose_Subcutaneous,Adipose Tissue
 Adipose - Visceral (Omentum),Adipose_Visceral_Omentum,Adipose Tissue
-Adrenal Gland,Adrenal_Gland,
-Bladder,Bladder,
+Adrenal Gland,Adrenal_Gland,Adrenal Gland
+Bladder,Bladder,Bladder
 Artery - Aorta,Artery_Aorta,Blood_Vessel
 Artery - Coronary,Artery_Coronary,Blood_Vessel
 Artery - Tibial,Artery_Tibial,Blood_Vessel
 Cells - EBV-transformed lymphocytes,Cells_EBV-transformed_lymphocytes,Blood_Vessel
-Breast - Mammary Tissue,Breast_Mammary_Tissue,
+Breast - Mammary Tissue,Breast_Mammary_Tissue,Breast - Mammary Tissue
 Cervix - Ectocervix,Cervix_Ectocervix,Cervix Uteri
 Cervix - Endocervix,Cervix_Endocervix,Cervix Uteri
 Colon - Sigmoid,Colon_Sigmoid,Colon
@@ -27,28 +27,28 @@ Colon - Transverse,Colon_Transverse,Colon
 Esophagus - Gastroesophageal Junction,Esophagus_Gastroesophageal_Junction,Esophagus
 Esophagus - Mucosa,Esophagus_Mucosa,Esophagus
 Esophagus - Muscularis,Esophagus_Muscularis,Esophagus
-Fallopian Tube,Fallopian_Tube,
+Fallopian Tube,Fallopian_Tube,Fallopian Tube
 Heart - Atrial Appendage,Heart_Atrial_Appendage,Heart
 Heart - Left Ventricle,Heart_Left_Ventricle,Heart
 Kidney - Cortex,Kidney_Cortex,Kidney
 Kidney - Medulla,Kidney_Medulla,Kidney
-Liver,Liver,
-Lung,Lung,
-Minor Salivary Gland,Minor_Salivary_Gland,
-Muscle - Skeletal,Muscle_Skeletal,
-Nerve - Tibial,Nerve_Tibial,
-Ovary,Ovary,
-Pancreas,Pancreas,
-Pituitary,Pituitary,
-Prostate,Prostate,
+Liver,Liver,Liver
+Lung,Lung,Lung
+Minor Salivary Gland,Minor_Salivary_Gland,Minor Salivary Gland
+Muscle - Skeletal,Muscle_Skeletal,Muscle - Skeletal
+Nerve - Tibial,Nerve_Tibial,Nerve - Tibial
+Ovary,Ovary,Ovary
+Pancreas,Pancreas,Pancreas
+Pituitary,Pituitary,Pituitary
+Prostate,Prostate,Prostate
 Cells - Cultured fibroblasts,Cells_Cultured_fibroblasts,Skin
 Skin - Not Sun Exposed (Suprapubic),Skin_Not_Sun_Exposed_Suprapubic,Skin
 Skin - Sun Exposed (Lower leg),Skin_Sun_Exposed_Lower_leg,Skin
-Small Intestine - Terminal Ileum,Small_Intestine_Terminal_Ileum,
-Spleen,Spleen,
-Stomach,Stomach,
-Testis,Testis,
-Thyroid,Thyroid,
-Uterus,Uterus,
-Vagina,Vagina,
-Whole Blood,Whole_Blood,
+Small Intestine - Terminal Ileum,Small_Intestine_Terminal_Ileum,Small Intestine - Terminal Ileum
+Spleen,Spleen,Spleen
+Stomach,Stomach,Stomach
+Testis,Testis,Testis
+Thyroid,Thyroid,Thyroid
+Uterus,Uterus,Uterus
+Vagina,Vagina,Vagina
+Whole Blood,Whole_Blood,Whole Blood

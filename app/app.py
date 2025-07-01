@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request, jsonify
-from multidgene import MultiDGeNe
-import plotly.io as pio
 import csv
 import os
+
+# Own packages
+from multidgene import MultiDGeNe
 
 WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
 app = Flask(__name__)
@@ -13,7 +14,7 @@ def load_tissues_from_csv(filepath=WORKSPACE+'data/tissues.csv'):
         reader = csv.reader(csvfile)
         for row in reader:
             if len(row) >= 2:
-                tissues.append({'label': row[0].strip(), 'value': row[1].strip()})
+                tissues.append({'label': row[0].strip(), 'value': row[1].strip(), 'group': row[2].strip})
     return tissues
 
 @app.route('/')

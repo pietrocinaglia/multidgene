@@ -15,7 +15,7 @@ function injectHTMLWithScripts(targetId, html) {
     });
 }
 
-document.getElementById('networkForm').addEventListener('submit', async function(e) {
+document.getElementById('network_form').addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const genes = document.getElementById('genes').value;
@@ -29,7 +29,7 @@ document.getElementById('networkForm').addEventListener('submit', async function
     }
 
     document.getElementById('loading').style.display = 'block';
-    document.getElementById('networkResult').innerHTML = '';
+    document.getElementById('network_visualization').innerHTML = '';
 
     const response = await fetch('/generate-network', {
         method: 'POST',
@@ -39,8 +39,11 @@ document.getElementById('networkForm').addEventListener('submit', async function
     .then(response => response.json())
     .then(result => {
         document.getElementById('loading').style.display = 'none';
-        //document.getElementById('networkResult').innerHTML = result.html_plot;
-        injectHTMLWithScripts('networkResult', result.html_plot);
+        injectHTMLWithScripts('network_visualization', result.html_plot);
+        var modal_view = new bootstrap.Modal(document.getElementById('network_visualization_modal'), {
+            keyboard: false
+        });
+        modal_view.show();
     })
     .catch(error => {
         console.error('Error:', error);
