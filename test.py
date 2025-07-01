@@ -47,12 +47,6 @@ multidimensional_network, edge_colors = multidgene.construct_multidimensional_ne
 
 html = multidimensional_network.generate_3d_plotly(output_path=WORKSPACE+'multidimensional_network.html')
 
-'''
-@app.get("/network/3d", response_class=HTMLResponse)
-def get_3d_network():
-    html = designer.generate_3d_plotly()
-    return HTMLResponse(content=html)
-'''
 # multidimensional_network.plot(output_path=WORKSPACE+'multidimensional_network', format='eps')
 # multidimensional_network.plot(output_path=WORKSPACE+'multidimensional_network', format='png', dpi=500)
 

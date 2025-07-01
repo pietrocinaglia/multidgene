@@ -1,233 +1,70 @@
 # -*- coding: utf-8 -*-
 
 import networkx as nx
-import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-import matplotlib.patches as patches
-import matplotlib.lines as mlines
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 import plotly.graph_objects as go
 import plotly.io as pio
 
+import uuid
+
+
 class VisualDesigner:
 
-    def __init__(self, multidimensional_network, output_path: str = None, format='eps', dpi='figure'):
+    def __init__(self, multidimensional_network, scroll_height_px:int=800, output_path: str = None, format='eps', dpi='figure'):
         self.multidimensional_network = multidimensional_network
+        self.scroll_height_px = scroll_height_px
         self.output_path = output_path
         self.format = format
         self.dpi = dpi
         self.title = "MultiDNetwork Visualization"
         self.color_map = list(mcolors.TABLEAU_COLORS.values())
 
-    def _compute_positions(self, layer_nodes, offset=(0, 0), seed=42):
-        layout = nx.spring_layout(self.multidimensional_network.graph.subgraph(layer_nodes), seed=seed)
-        return {node: (coord[0] + offset[0], coord[1] + offset[1]) for node, coord in layout.items()}
 
-    def _draw_layer_boundary(self, ax, layer_nodes, pos, color, label):
-        if not layer_nodes:
-            return
+    def generate_clickable_html(self, fig):
+        div_id = f"plot_{uuid.uuid4().hex}"
 
-        x_vals = [pos[n][0] for n in layer_nodes]
-        y_vals = [pos[n][1] for n in layer_nodes]
-        min_x, max_x = min(x_vals), max(x_vals)
-        min_y, max_y = min(y_vals), max(y_vals)
-        width, height = max_x - min_x + 1.0, max_y - min_y + 2.0
+        plot_html = pio.to_html(fig, full_html=False, include_plotlyjs='cdn', div_id=div_id)
 
-        ellipse = patches.Ellipse(((min_x + max_x) / 2, (min_y + max_y) / 2), width, height, color=color, alpha=0.2)
-        ax.add_patch(ellipse)
-        ax.text((min_x + max_x) / 2, max_y + 1.2, label, ha='center', fontsize=12, weight='bold')
+        custom_js = f"""
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {{
+            var gd = document.getElementById('{div_id}');
+            gd.on('plotly_click', function (data) {{
+                var clicked_point = data.points[0];
+                if (!clicked_point || !clicked_point.text) return;
 
-    def _get_edges_by_layer(self, layer):
-        return [(u, v) for u, v, _ in self.multidimensional_network.graph.edges(data=True) if u[1] == v[1] == layer]
+                var clicked_node = clicked_point.text;
+                alert(clicked_node);
 
-    def _get_interlayer_edges(self):
-        return [(u, v) for u, v, _ in self.multidimensional_network.graph.edges(data=True) if u[1] != v[1]]
+                //var all_data = gd.data;
+                //console.log(all_data);
+            }});
+        }});
+        </script>
+        """
 
-    def _draw_edges(self, ax, pos, layer_positions):
-        legend_handles = []
-
-        # Draw intralayer edges
-        for layer in sorted(self.multidimensional_network.layers):
-            color = layer_positions[layer]
-            layer_edges = self._get_edges_by_layer(layer)
-            nx.draw_networkx_edges(self.multidimensional_network.graph, pos, edgelist=layer_edges, edge_color=color, ax=ax, arrows=False)
-            legend_handles.append(mlines.Line2D([], [], color=color, label=layer, linewidth=4))
-
-        # Draw interlayer edges
-        layer_pairs = set((u[1], v[1]) for u, v in self._get_interlayer_edges())
-        interlayer_colors = {pair: color for pair, color in zip(layer_pairs, mcolors.CSS4_COLORS.values())}
-
-        for u, v in self._get_interlayer_edges():
-            pair = (u[1], v[1])
-            color = interlayer_colors.get(pair, 'grey')
-            nx.draw_networkx_edges(self.multidimensional_network.graph, pos, edgelist=[(u, v)], edge_color=color, style='dashed', ax=ax, arrows=False)
-
-        for (layer1, layer2), color in interlayer_colors.items():
-            legend_handles.append(mlines.Line2D([], [], color=color, linestyle='dashed', label=f"{layer1} ↔ {layer2}", linewidth=4))
-
-        return legend_handles
-
-    def _draw_nodes_and_labels(self, ax, pos):
-        nx.draw_networkx_nodes(self.multidimensional_network.graph, pos, node_color='grey', node_size=350, ax=ax)
-        nx.draw_networkx_labels(self.multidimensional_network.graph, pos, font_size=8, font_color="black",
-                                labels={n: n[0] for n in self.multidimensional_network.graph.nodes}, ax=ax)
-
-    def _compute_layer_positions(self):
-        pos, layer_positions = {}, {}
-        for i, layer in enumerate(sorted(self.multidimensional_network.layers)):
-            offset = (1.5 if i % 2 == 0 else 0, i * 5)
-            layer_nodes = [n for n in self.multidimensional_network.graph.nodes if n[1] == layer]
-            layer_pos = self._compute_positions(layer_nodes, offset)
-            pos.update(layer_pos)
-            layer_positions[layer] = self.color_map[i % len(self.color_map)]
-        return pos, layer_positions
-    
-    def plot(self):
-        fig, ax = plt.subplots()
-        pos, layer_positions = self._compute_layer_positions()
-
-        for layer in sorted(self.multidimensional_network.layers):
-            layer_nodes = [n for n in self.multidimensional_network.graph.nodes if n[1] == layer]
-            self._draw_layer_boundary(ax, layer_nodes, pos, layer_positions[layer], layer)
-
-        self._draw_nodes_and_labels(ax, pos)
-        
-        legend_handles = self._draw_edges(ax, pos, layer_positions)
-
-        ax.legend(handles=legend_handles, loc='upper left', bbox_to_anchor=(1.05, 1), borderaxespad=0., frameon=True, fontsize=6)
-        ax.set_title(self.title)
-        ax.axis('off')
-        plt.tight_layout()
-
-        if self.output_path:
-            plt.savefig(f"{self.output_path}.{self.format}", bbox_inches='tight', format=self.format, dpi=self.dpi)
-        else:
-            plt.show()
+        return f"""
+        <div style="height:{self.scroll_height_px}px; overflow-y:auto; border:1px solid #ccc;">
+            {plot_html}
+            {custom_js}
+        </div>
+        """
 
 
-    def plot3d(self):
-        fig = plt.figure(figsize=(12, 9))
-        ax = fig.add_subplot(111, projection='3d')
+    def generate_3d_plotly(self):
+        """
+        Generate a 3D Plotly visualization of the multidimensional network.
 
-        pos = {}
-        layer_positions = {}
-        color_map = list(mcolors.TABLEAU_COLORS.values())
-        layer_list = sorted(self.multidimensional_network.layers)
-        z_spacing = 10
+        Args:
+            scroll_height_px (int): Height of the scrollable HTML container in pixels.
 
-        layer_bounds = {}
-        x_offset_step = 2.5
-        y_offset_step = 0
-
-        for i, layer in enumerate(layer_list):
-            z = i * z_spacing
-            x_offset = x_offset_step if i % 2 == 0 else 0
-            y_offset = i * y_offset_step
-
-            layer_nodes = [n for n in self.multidimensional_network.graph.nodes if n[1] == layer]
-            layer_pos = nx.spring_layout(self.multidimensional_network.graph.subgraph(layer_nodes), seed=42)
-
-            for node, (x, y) in layer_pos.items():
-                pos[node] = (x + x_offset, y + y_offset, z)
-
-            layer_positions[layer] = color_map[i % len(color_map)]
-
-            x_vals = [pos[n][0] for n in layer_nodes]
-            y_vals = [pos[n][1] for n in layer_nodes]
-            if x_vals and y_vals:
-                padding = 0.6
-                layer_bounds[layer] = {
-                    "x_min": min(x_vals) - padding,
-                    "x_max": max(x_vals) + padding,
-                    "y_min": min(y_vals) - padding,
-                    "y_max": max(y_vals) + padding,
-                    "z": z
-                }
-
-        # Draw nodes
-        for node, (x, y, z) in pos.items():
-            ax.scatter(x, y, z, color='black', s=55)
-            ax.text(x, y, z + 0.5, node[0], fontsize=6)
-
-        # Intralayer edges
-        for layer in layer_list:
-            color = layer_positions[layer]
-            edges = self._get_edges_by_layer(layer)
-            for u, v in edges:
-                x_vals = [pos[u][0], pos[v][0]]
-                y_vals = [pos[u][1], pos[v][1]]
-                z_vals = [pos[u][2], pos[v][2]]
-                ax.plot(x_vals, y_vals, z_vals, color=color, linewidth=1.5)
-
-        # Interlayer edges
-        interlayer_edges = self._get_interlayer_edges()
-        interlayer_colors_raw = [
-            c for c in mcolors.CSS4_COLORS.values()
-            if mcolors.rgb_to_hsv(mcolors.to_rgb(c))[2] < 0.85
-        ]
-        interlayer_pairs = list(set((u[1], v[1]) for u, v in interlayer_edges))
-        interlayer_colors = {
-            pair: interlayer_colors_raw[i % len(interlayer_colors_raw)]
-            for i, pair in enumerate(interlayer_pairs)
-        }
-
-        for u, v in interlayer_edges:
-            pair = (u[1], v[1])
-            color = interlayer_colors.get(pair, 'dimgray')
-            x_vals = [pos[u][0], pos[v][0]]
-            y_vals = [pos[u][1], pos[v][1]]
-            z_vals = [pos[u][2], pos[v][2]]
-            ax.plot(x_vals, y_vals, z_vals, color=color, linestyle='dashed', linewidth=1)
-
-        # 3D layer boxes
-        for layer, bounds in layer_bounds.items():
-            x_min, x_max = bounds["x_min"], bounds["x_max"]
-            y_min, y_max = bounds["y_min"], bounds["y_max"]
-            z = bounds["z"]
-            dz = 1.0
-
-            verts = [
-                [x_min, y_min, z], [x_max, y_min, z], [x_max, y_max, z], [x_min, y_max, z],
-                [x_min, y_min, z + dz], [x_max, y_min, z + dz],
-                [x_max, y_max, z + dz], [x_min, y_max, z + dz]
-            ]
-            faces = [
-                [verts[0], verts[1], verts[2], verts[3]],
-                [verts[4], verts[5], verts[6], verts[7]],
-                [verts[0], verts[1], verts[5], verts[4]],
-                [verts[1], verts[2], verts[6], verts[5]],
-                [verts[2], verts[3], verts[7], verts[6]],
-                [verts[3], verts[0], verts[4], verts[7]]
-            ]
-            box = Poly3DCollection(faces, alpha=0.15, facecolor=layer_positions[layer], edgecolor=layer_positions[layer])
-            ax.add_collection3d(box)
-
-            ax.text((x_min + x_max) / 2, y_max + 0.3, z + dz + 0.3, layer, ha='center', fontsize=10, weight='bold', color=layer_positions[layer])
-
-        # Legend
-        legend_handles = [mlines.Line2D([], [], color=layer_positions[layer], label=layer, linewidth=2) for layer in layer_list]
-        legend_handles += [
-            mlines.Line2D([], [], color=color, linestyle='dashed', label=f"{l1} ↔ {l2}", linewidth=2)
-            for (l1, l2), color in interlayer_colors.items()
-        ]
-        ax.legend(handles=legend_handles, loc='upper left', bbox_to_anchor=(1.05, 1), fontsize=8)
-
-        ax.set_title(self.title, fontsize=13, weight='bold')
-        ax.set_axis_off()
-        ax.view_init(elev=20, azim=135)
-
-        plt.tight_layout()
-        if self.output_path:
-            plt.savefig(self.output_path, bbox_inches='tight', format=self.format)
-        else:
-            plt.show()
-
-
-    def generate_3d_plotly(self, scroll_height_px:int=800):
+        Returns:
+            str: HTML string containing the Plotly plot.
+        """
         layer_list = sorted(self.multidimensional_network.layers)
 
-        layer_thickness = 0.5
+        layer_thickness = 0.1
         x_offset_step = 3
         y_offset_step = 0
         z_offset_step = 10
@@ -316,8 +153,11 @@ class VisualDesigner:
                 rev_pair = (v[1], u[1])
                 color = interlayer_colors.get(pair, interlayer_colors.get(rev_pair, 'dimgray'))
                 style = 'dash'
+
             edge_traces.append(go.Scatter3d(
-                x=x_vals, y=y_vals, z=z_vals,
+                x=x_vals,
+                y=y_vals,
+                z=z_vals,
                 mode='lines',
                 line=dict(color=color, width=4, dash=style),
                 hoverinfo='none',
@@ -369,7 +209,7 @@ class VisualDesigner:
                 name=f"Layer {layer}",
                 showlegend=False
             ))
-        
+
         # Layer legend markers
         legend_layer_traces = []
         for layer in layer_list:
@@ -407,8 +247,8 @@ class VisualDesigner:
             margin=dict(l=0, r=0, b=0, t=40),
         )
 
+        '''
         plot_html = pio.to_html(fig, full_html=False, include_plotlyjs='cdn')
-
         scrollable_html = f"""
         <div style="height:{scroll_height_px}px; overflow-y:auto; border:1px solid #ccc;">
             {plot_html}
@@ -418,5 +258,13 @@ class VisualDesigner:
         if self.output_path:
             with open(self.output_path, "w", encoding="utf-8") as f:
                 f.write(scrollable_html)
+        '''
+
+        scrollable_html = self.generate_clickable_html(fig)
+
+        if self.output_path:
+            with open(self.output_path, "w", encoding="utf-8") as f:
+                f.write(scrollable_html)
 
         return scrollable_html
+        
