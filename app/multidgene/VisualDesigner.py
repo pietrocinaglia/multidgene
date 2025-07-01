@@ -9,7 +9,6 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 import plotly.graph_objects as go
 import plotly.io as pio
-import random
 
 class VisualDesigner:
 

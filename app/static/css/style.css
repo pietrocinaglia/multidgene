@@ -1,0 +1,39 @@
+/* Genomics look and feel */
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(120deg, #f0f4ff, #ffffff);
+    color: #333;
+}
+
+h2 {
+    font-weight: 600;
+    color: #004e89;
+}
+
+/* Gene textarea */
+.gene-textarea {
+    border: 2px solid #cce5ff;
+    border-radius: 12px;
+    font-family: monospace;
+    background-color: #fefeff;
+}
+
+.gene-textarea:focus {
+    border-color: #66bfff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 136, 204, 0.25);
+}
+
+/* Tissue checkboxes */
+.tissue-checkbox {
+    border-left: 4px solid #66bfff;
+    transition: background 0.3s ease;
+}
+
+.tissue-checkbox:hover {
+    background: #eaf6ff;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0a58ca;
+}

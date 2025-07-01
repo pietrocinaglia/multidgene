@@ -37,7 +37,7 @@ print("- Mode: " + str(mode))
 print("################################################")
 print()
 
-multidgene = MultiDGeNe(genes_of_interest, tissues_of_interest, data_path=WORKSPACE+'data/', p_threshold=0.05, mode=mode, verbose=True)
+multidgene = MultiDGeNe(genes_of_interest, tissues_of_interest, data_path=WORKSPACE+'app/data/', p_threshold=0.05, mode=mode, verbose=True)
 
 # Data processing
 multidimensional_network, edge_colors = multidgene.construct_multidimensional_network()
