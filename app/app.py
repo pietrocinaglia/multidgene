@@ -47,7 +47,7 @@ def generate_network():
 
     network, _ = multidgene.construct_multidimensional_network()
 
-    html_plot = network.generate_3d_plotly()
+    html_plot = network.generate_3d_plotly(height_px=600)
     
     return jsonify({'html_plot': html_plot})
 

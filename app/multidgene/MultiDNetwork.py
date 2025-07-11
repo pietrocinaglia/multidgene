@@ -141,7 +141,7 @@ class MultiDNetwork:
         visual_designer.plot3d()
     '''
 
-    def generate_3d_plotly(self, output_path:str=None):
+    def generate_3d_plotly(self, height_px:int=800, output_path:str=None):
         print("Generating 3D Plot (HTML)...")
-        visual_designer = VisualDesigner(self, output_path=output_path)
+        visual_designer = VisualDesigner(self, height_px=height_px, output_path=output_path)
         return visual_designer.generate_3d_plotly()

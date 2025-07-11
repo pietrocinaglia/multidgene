@@ -11,9 +11,9 @@ import uuid
 
 class VisualDesigner:
 
-    def __init__(self, multidimensional_network, scroll_height_px:int=800, output_path: str = None, format='eps', dpi='figure'):
+    def __init__(self, multidimensional_network, height_px:int=800, output_path: str = None, format='eps', dpi='figure'):
         self.multidimensional_network = multidimensional_network
-        self.scroll_height_px = scroll_height_px
+        self.height_px = height_px
         self.output_path = output_path
         self.format = format
         self.dpi = dpi
@@ -45,7 +45,7 @@ class VisualDesigner:
         """
 
         return f"""
-        <div style="height:{self.scroll_height_px}px; overflow-y:auto; border:1px solid #ccc;">
+        <div style="width:100%; height:{self.height_px}px; overflow-y:auto; border:1px solid #ccc;">
             {plot_html}
             {custom_js}
         </div>
@@ -55,9 +55,6 @@ class VisualDesigner:
     def generate_3d_plotly(self):
         """
         Generate a 3D Plotly visualization of the multidimensional network.
-
-        Args:
-            scroll_height_px (int): Height of the scrollable HTML container in pixels.
 
         Returns:
             str: HTML string containing the Plotly plot.
@@ -250,7 +247,7 @@ class VisualDesigner:
         '''
         plot_html = pio.to_html(fig, full_html=False, include_plotlyjs='cdn')
         scrollable_html = f"""
-        <div style="height:{scroll_height_px}px; overflow-y:auto; border:1px solid #ccc;">
+        <div style="height:{height_px}px; overflow-y:auto; border:1px solid #ccc;">
             {plot_html}
         </div>
         """
