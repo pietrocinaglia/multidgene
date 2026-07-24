@@ -5,6 +5,7 @@ import scipy
 import numpy as np
 from itertools import combinations
 from statsmodels.stats.multitest import multipletests
+import warnings
 
 ###
 # @project: multi-DGeNe
@@ -82,8 +83,8 @@ def inferring_intralayer_edges(
             v_gexp = v_data.data.values[0]
 
             if len(u_gexp) < 3 or len(v_gexp) < 3:
-                #if verbose:
-                    #warnings.warn("Size of samples are empty or less than 3; skipped.")
+                if verbose:
+                    warnings.warn("Size of samples are empty or less than 3; skipped.")
                 continue
 
             s, p = __statistical_analysis(u_gexp, v_gexp, mode='co-exp')
@@ -114,7 +115,7 @@ def inferring_interlayer_edges(
     tissues_of_interest: list,
     multidimensional_network: MultiDNetwork,
     p_threshold: float = 1e-8,
-    s_threshold: list = [0.5, 0.9],
+    #s_threshold: list = [0.5, 0.9],
     mode: str = "equal_exp",
     edge_colors: dict = {},
     verbose: bool = True
@@ -158,7 +159,6 @@ def inferring_interlayer_edges(
         keys, _, pvals = zip(*results)
         _, padj_all, _, _ = multipletests(pvals, method='fdr_bh')
 
-        # Applying global multiple testing correction
         for (gene, l1, l2), adj_p in zip(keys, padj_all):
             if (mode == 'equal_exp' and adj_p > p_threshold) or (mode == 'diff_exp' and adj_p < p_threshold):
                 multidimensional_network.add_edge(gene,gene,l1,l2,weight=adj_p)
@@ -209,11 +209,11 @@ def inferring_interlayer_edges(
         if not results:
             return multidimensional_network, edge_colors
         
-        # Applying global multiple testing correction
         keys, _, pvals = zip(*results)
         _, padj_all, _, _ = multipletests(pvals, method='fdr_bh')
 
         for (u, v, l1, l2), adj_p in zip(keys, padj_all):
-            multidimensional_network.add_edge(u,v,l1,l2,weight=adj_p)
+            if (adj_p < p_threshold):
+                multidimensional_network.add_edge(u,v,l1,l2,weight=adj_p)
     
     return multidimensional_network, edge_colors
