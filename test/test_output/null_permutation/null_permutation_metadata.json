@@ -1,0 +1,53 @@
+{
+  "dataset": "GTEx Analysis Release V10 / gtex_v10",
+  "mode": "diff_co_exp",
+  "p_threshold_interlayer": 0.05,
+  "permutations_per_tier": 500,
+  "base_seed": 20260922,
+  "genes": [
+    "SNCA",
+    "LRRK2",
+    "PRKN",
+    "PINK1",
+    "GBA",
+    "VPS35",
+    "ATP13A2",
+    "PLA2G6",
+    "FBXO7",
+    "DNAJC6",
+    "SYNJ1",
+    "PARK7",
+    "VPS13C",
+    "RAB32",
+    "RAB39B"
+  ],
+  "tissue_tiers": {
+    "inherent": [
+      "Brain_Cortex",
+      "Brain_Substantia_nigra",
+      "Brain_Hippocampus",
+      "Brain_Putamen_basal_ganglia",
+      "Brain_Cerebellum",
+      "Brain_Caudate_basal_ganglia"
+    ],
+    "related": [
+      "Stomach",
+      "Small_Intestine_Terminal_Ileum",
+      "Colon_Sigmoid",
+      "Skin_Sun_Exposed_Lower_leg",
+      "Adrenal_Gland",
+      "Heart_Left_Ventricle"
+    ],
+    "non_inherent": [
+      "Adipose_Subcutaneous",
+      "Adipose_Visceral_Omentum",
+      "Artery_Aorta",
+      "Artery_Coronary",
+      "Artery_Tibial",
+      "Lung"
+    ]
+  },
+  "null_model": "Independent within-tissue permutation of each gene's TPM vector; marginal gene distributions, expression values, sample sizes, genes, and tissues are preserved, while gene-gene sample correspondence is destroyed.",
+  "empirical_test": "One-sided upper-tail empirical p-value (1 + count(T_null >= T_observed)) / (B + 1).",
+  "important_note": "The script calls the current multi-DGeNe constructor directly. Therefore the null analysis uses exactly the inference behavior implemented in the local code version."
+}

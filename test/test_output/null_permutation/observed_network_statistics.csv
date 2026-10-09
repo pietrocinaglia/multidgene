@@ -1,0 +1,4 @@
+tier,n_genes,n_tissues,max_intralayer_edges,max_diff_co_exp_edges,intralayer_edges,intralayer_density,diff_co_exp_edges,diff_co_exp_density
+inherent,15,6,630,1575,418,0.6634920634920635,717,0.4552380952380952
+related,15,6,630,1575,215,0.3412698412698413,1102,0.6996825396825397
+non_inherent,15,6,630,1575,59,0.09365079365079365,865,0.5492063492063493

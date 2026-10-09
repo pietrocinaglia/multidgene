@@ -1,0 +1,4 @@
+tier,tissues,read_samples_median,read_samples_min,read_samples_max,read_donors_median,read_donors_min,read_donors_max,tpm_samples_median,tpm_samples_min,tpm_samples_max
+inherent,6,260.5,183,300,260.5,183,300,260.5,183,300
+related,6,413.0,207,754,413.0,207,754,413.0,207,754
+non_inherent,6,595.5,268,714,595.5,268,714,595.5,268,714

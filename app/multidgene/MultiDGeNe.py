@@ -20,7 +20,9 @@ class MultiDGeNe:
         self,
         genes_of_interest: list,
         tissues_of_interest: list = [],
-        p_threshold: float = 0.05,
+        p_threshold_intralayer: float = 0.05,
+        p_threshold_interlayer: float = 0.05,
+        s_threshold: list = [0.5, 0.9],
         data_path: str = None,
         mode: str = 'equal_exp',
         verbose: bool = False
@@ -39,10 +41,10 @@ class MultiDGeNe:
         self.data_path = data_path or os.path.dirname(os.path.realpath(__file__)) + "/"
         self.genes_of_interest = genes_of_interest
         self.tissues_of_interest = tissues_of_interest
-        self.p_threshold = p_threshold
+        self.p_threshold_intralayer = p_threshold_intralayer
+        self.p_threshold_interlayer = p_threshold_interlayer
+        self.s_threshold = s_threshold
         self.mode = mode
-        # Default
-        self.s_threshold = [0.5, 0.9]
 
         if self.verbose:
             self._show_banner()
@@ -103,6 +105,8 @@ class MultiDGeNe:
             gene_exp_by_tissue=self.gene_expression_tpm_by_tissue,
             tissues_of_interest=self.tissues_of_interest,
             multidimensional_network=multidimensional_network,
+            p_threshold=self.p_threshold_intralayer,
+            s_threshold=self.s_threshold,
             verbose=self.verbose
         )
 
@@ -113,7 +117,7 @@ class MultiDGeNe:
             gene_exp_by_tissue=interlayer_input,
             tissues_of_interest=self.tissues_of_interest,
             mode=self.mode,
-            p_threshold=self.p_threshold,
+            p_threshold=self.p_threshold_interlayer,
             multidimensional_network=multidimensional_network,
             edge_colors=edge_colors,
             verbose=self.verbose

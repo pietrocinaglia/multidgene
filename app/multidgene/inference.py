@@ -115,7 +115,6 @@ def inferring_interlayer_edges(
     tissues_of_interest: list,
     multidimensional_network: MultiDNetwork,
     p_threshold: float = 1e-8,
-    #s_threshold: list = [0.5, 0.9],
     mode: str = "equal_exp",
     edge_colors: dict = {},
     verbose: bool = True

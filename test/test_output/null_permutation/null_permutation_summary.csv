@@ -1,0 +1,7 @@
+tier,metric,observed,null_mean,null_sd,null_median,null_min,null_q025,null_q975,null_max,empirical_p_upper,observed_minus_null_mean,z_vs_null
+inherent,intralayer_edges,418,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001996007984031936,418.0,inf
+inherent,diff_co_exp_edges,717,0.094,0.42133008209259437,0.0,0.0,0.0,1.0,5.0,0.001996007984031936,716.906,1701.5305350128021
+related,intralayer_edges,215,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001996007984031936,215.0,inf
+related,diff_co_exp_edges,1102,0.238,0.8383087277644747,0.0,0.0,0.0,3.0,7.0,0.001996007984031936,1101.762,1314.2676003601662
+non_inherent,intralayer_edges,59,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001996007984031936,59.0,inf
+non_inherent,diff_co_exp_edges,865,0.094,0.44896228602025917,0.0,0.0,0.0,1.0,5.0,0.001996007984031936,864.906,1926.4558002561746
