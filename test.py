@@ -1,10 +1,4 @@
 # -*- coding: utf-8 -*-
-
-import os
-
-# Own modules
-from app.multidgene import MultiDGeNe
-
 ###
 #
 # [ This code is made available for testing purposes only ]
@@ -15,6 +9,11 @@ from app.multidgene import MultiDGeNe
 # @description: Multi-Dimensional Gene Network (multi-DGeNe) inference, bridging Co-Expression and Expression Dynamics across tissues.
 # @url: https://github.com/pietrocinaglia/multidgene
 ###
+
+import os
+
+# Own modules
+from app.multidgene import MultiDGeNe
 
 WORKSPACE = os.path.dirname(os.path.realpath(__file__)) + "/"
 OUTPUT_FOLDER = WORKSPACE + "test_output/"

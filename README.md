@@ -272,6 +272,18 @@ The current GTEx-centred workflow does not itself constitute a disease case-cont
 
 ---
 
+## Graphical User Interface
+
+The Graphical User Interface (GUI) provides access to the main multi-DGeNe parameters and supports interactive inspection of the inferred multidimensional network.
+
+![multi-DGeNe GUI – parameter configuration](preview/preview1.png)
+
+![multi-DGeNe GUI – interactive network visualisation](preview/preview2.png)
+
+The network visualisation is fully interactive, allowing users to zoom, rotate, filter and adjust the displayed network according to their analytical needs.
+
+---
+
 ## Licence
 
 `multi-DGeNe` is released under the **MIT Licence**. See `LICENSE` for details.

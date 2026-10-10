@@ -39,7 +39,8 @@ def generate_network():
     multidgene = MultiDGeNe(
         genes_of_interest=genes,
         tissues_of_interest=tissues_selected,
-        p_threshold=p_threshold,
+        p_threshold_intralayer=p_threshold,
+        p_threshold_interlayer=p_threshold,
         mode=mode,
         data_path=WORKSPACE+'data/',
         verbose=False
